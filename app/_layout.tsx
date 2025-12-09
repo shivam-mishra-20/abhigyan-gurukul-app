@@ -10,7 +10,7 @@ import "react-native-reanimated";
 import "../global.css";
 
 export const unstable_settings = {
-  anchor: "(tabs)",
+  initialRouteName: "splash",
 };
 
 export default function RootLayout() {
@@ -18,11 +18,16 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
+        <Stack.Screen name="splash" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="(student)" options={{ headerShown: false }} />
+        <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
+        <Stack.Screen name="(guest)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
+          options={{ presentation: "modal", title: "Modal", headerShown: true }}
         />
       </Stack>
       <StatusBar style="auto" />
