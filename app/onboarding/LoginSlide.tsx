@@ -18,11 +18,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 interface LoginSlideProps {
   onLoginSuccess: (role: string) => void;
   onSkip: () => void;
+  onRegister: () => void;
 }
 
 export default function LoginSlide({
   onLoginSuccess,
   onSkip,
+  onRegister,
 }: LoginSlideProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -153,7 +155,7 @@ export default function LoginSlide({
               <Pressable
                 onPress={handleLogin}
                 disabled={loading}
-                className="bg-green-500 rounded-full py-4 items-center justify-center shadow-lg"
+                className="bg-green-500 rounded-full py-4 items-center justify-center shadow-lg mb-3"
                 style={{
                   shadowColor: "#22c55e",
                   shadowOffset: { width: 0, height: 4 },
@@ -171,9 +173,27 @@ export default function LoginSlide({
                 )}
               </Pressable>
 
+              {/* Register Button */}
+              <Pressable
+                onPress={onRegister}
+                disabled={loading}
+                className="bg-blue-500 rounded-full py-4 items-center justify-center shadow-lg"
+                style={{
+                  shadowColor: "#3b82f6",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 6,
+                }}
+              >
+                <Text className="text-white text-lg font-semibold">
+                  Register New Account
+                </Text>
+              </Pressable>
+
               {/* Info Text */}
               <Text className="text-gray-500 text-center text-sm mt-4">
-                Don&apos;t have an account? Contact your administrator
+                New users require admin approval after registration
               </Text>
             </View>
 

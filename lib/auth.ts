@@ -3,6 +3,7 @@ import { apiFetch } from "./api";
 
 export type Credentials = { email: string; password: string };
 export type User = {
+  welcomeTutorialCompleted: any;
   id?: string;
   email?: string;
   role?: "admin" | "teacher" | "student" | string;

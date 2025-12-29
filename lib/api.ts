@@ -3,20 +3,38 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 // API configuration - Platform-specific URLs
-const getApiBase = () => {
-  // Your computer's local IP address (for physical devices)
-  const YOUR_COMPUTER_IP = "192.168.29.187";
+export const getApiBase = () => {
+  // Try to auto-detect the machine IP from Expo's debuggerHost
+  // debuggerHost format: "192.168.x.x:19000" or "10.x.x.x:8081"
+  const debuggerHost = Constants.expoConfig?.hostUri ||
+    Constants.manifest?.debuggerHost ||
+    Constants.manifest2?.extra?.expoGo?.debuggerHost;
   
-  // Check if running on physical device (Expo Go)
+  // Extract IP from debuggerHost (strip port)
+  const hostIp = debuggerHost ? debuggerHost.split(':')[0] : null;
+  
+  console.log('[API Config] debuggerHost:', debuggerHost, 'extracted IP:', hostIp);
+  
   const isExpoGo = Constants.appOwnership === "expo";
+  const PORT = 5000;
   
   if (Platform.OS === "android") {
-    // Android emulator uses 10.0.2.2, physical device needs your IP
-    return isExpoGo ? `http://${YOUR_COMPUTER_IP}:5000` : "http://10.0.2.2:5000";
+    // Physical device: use the same IP as Expo Metro bundler
+    if (isExpoGo && hostIp) {
+      return `http://${hostIp}:${PORT}`;
+    }
+    // Android emulator fallback
+    return `http://10.0.2.2:${PORT}`;
   } else if (Platform.OS === "ios") {
-    return "http://localhost:5000"; // iOS simulator
+    // iOS physical device: use host IP from Expo
+    if (isExpoGo && hostIp) {
+      return `http://${hostIp}:${PORT}`;
+    }
+    // iOS simulator fallback
+    return `http://localhost:${PORT}`;
   } else {
-    return "http://localhost:5000"; // Web
+    // Web fallback
+    return `http://localhost:${PORT}`;
   }
 };
 
@@ -80,9 +98,19 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   } catch (error) {
     console.error(`[API] Network error:`, error);
     if (error instanceof Error && error.message.includes("Network request failed")) {
-      throw new Error(
-        `Cannot connect to backend at ${API_BASE}. Please ensure:\n1. Backend server is running\n2. URL is correct for your platform (${Platform.OS})`
-      );
+      const troubleshoot = [
+        `Backend URL: ${API_BASE}`,
+        `Platform: ${Platform.OS}`,
+        `Expo ownership: ${Constants.appOwnership}`,
+        '',
+        'Troubleshooting:',
+        '1. Ensure backend is running on port 5000',
+        '2. Check firewall allows connections',
+        '3. Verify phone and computer are on same WiFi network',
+        '4. Try accessing the API in a browser: ' + API_BASE
+      ].join('\n');
+      
+      throw new Error(`Network request failed\n\n${troubleshoot}`);
     }
     throw error;
   }

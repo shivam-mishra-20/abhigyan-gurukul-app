@@ -13,7 +13,7 @@ export const slides: SlideData[] = [
   {
     id: "1",
     type: "content",
-    image: require("../../assets/images/logo.png"),
+    image: require("../assets/images/logo.png"),
     title: "Welcome To\nAbhigyan Gurukul",
     subtitle:
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt dolore magna aliqua",

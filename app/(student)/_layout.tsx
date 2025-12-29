@@ -1,20 +1,35 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
+// Rich green theme colors
+const THEME = {
+  primary: "#059669", // Emerald 600
+  inactive: "#9ca3af",
+};
+
 export default function StudentLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#3b82f6",
-        tabBarInactiveTintColor: "#9ca3af",
+        tabBarActiveTintColor: THEME.primary,
+        tabBarInactiveTintColor: THEME.inactive,
         headerShown: false,
         tabBarStyle: {
           backgroundColor: "#ffffff",
           borderTopWidth: 1,
           borderTopColor: "#e5e7eb",
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 65,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
         },
       }}
     >
@@ -28,20 +43,20 @@ export default function StudentLayout() {
         }}
       />
       <Tabs.Screen
-        name="exams"
+        name="courses"
         options={{
-          title: "Exams",
+          title: "Courses",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text" size={size} color={color} />
+            <Ionicons name="book" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="results"
+        name="learning"
         options={{
-          title: "Results",
+          title: "My Learning",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy" size={size} color={color} />
+            <Ionicons name="school" size={size} color={color} />
           ),
         }}
       />
@@ -54,6 +69,18 @@ export default function StudentLayout() {
           ),
         }}
       />
+      {/* Hide other screens from tab bar - accessible via navigation */}
+      <Tabs.Screen name="exams" options={{ href: null }} />
+      <Tabs.Screen name="results" options={{ href: null }} />
+      <Tabs.Screen name="progress" options={{ href: null }} />
+      <Tabs.Screen name="attendance" options={{ href: null }} />
+      <Tabs.Screen name="materials" options={{ href: null }} />
+      <Tabs.Screen name="schedule" options={{ href: null }} />
+      <Tabs.Screen name="leaderboard" options={{ href: null }} />
+      <Tabs.Screen name="attempt/[attemptId]" options={{ href: null }} />
+      <Tabs.Screen name="result/[attemptId]" options={{ href: null }} />
+      <Tabs.Screen name="course/[courseId]" options={{ href: null }} />
     </Tabs>
   );
 }
+

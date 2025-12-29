@@ -1,263 +1,299 @@
-import { getUser, logout } from "@/lib/auth";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import {
-  ActivityIndicator,
+  Dimensions,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   View,
 } from "react-native";
+import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+// Constants
+import { COLORS } from "@/constants/colors";
+
+// Hooks
+import { useToast } from "@/lib/context";
+import { useDashboard } from "@/lib/hooks";
+
+// Components
+import { LoadingScreen } from "@/components/shared";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface StatItem {
+  id: string;
+  key: "totalExams" | "pendingReviews" | "totalStudents" | "totalPapers";
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  route: string;
+}
+
+interface FeaturedAction {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  route: string;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const STAT_ITEMS: StatItem[] = [
+  {
+    id: "exams",
+    key: "totalExams",
+    title: "Total Exams",
+    icon: "document-text",
+    route: "/(teacher)/exams",
+  },
+  {
+    id: "reviews",
+    key: "pendingReviews",
+    title: "Pending Reviews",
+    icon: "time",
+    route: "/(teacher)/reviews",
+  },
+  {
+    id: "students",
+    key: "totalStudents",
+    title: "Total Students",
+    icon: "people",
+    route: "/(teacher)/students",
+  },
+  {
+    id: "papers",
+    key: "totalPapers",
+    title: "Question Papers",
+    icon: "library",
+    route: "/(teacher)/create-paper",
+  },
+];
+
+const FEATURED_ACTIONS: FeaturedAction[] = [
+  {
+    id: "create-exam",
+    title: "Create New Exam",
+    subtitle: "Build exam with AI assistance",
+    icon: "add-circle",
+    route: "/(teacher)/create-paper",
+  },
+  {
+    id: "review-submissions",
+    title: "Review Submissions",
+    subtitle: "Grade pending student answers",
+    icon: "checkmark-done-circle",
+    route: "/(teacher)/reviews",
+  },
+  {
+    id: "student-performance",
+    title: "Student Performance",
+    subtitle: "View analytics & insights",
+    icon: "bar-chart",
+    route: "/(teacher)/performance",
+  },
+];
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export default function TeacherHome() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
+  // Use our custom dashboard hook for data fetching
+  const { stats, loading, refreshing, refetch, error } = useDashboard();
 
-  const loadUserData = async () => {
-    try {
-      const userData = await getUser();
-      setUser(userData);
-    } catch (error) {
-      console.error("Error loading user:", error);
-    } finally {
-      setLoading(false);
+  // Handle refresh
+  const onRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  // Show error toast if there's an error
+  React.useEffect(() => {
+    if (error) {
+      toast.error("Failed to load dashboard data");
     }
+  }, [error, toast]);
+
+  // Navigate to route
+  const navigateTo = useCallback(
+    (route: string) => {
+      router.push(route as any);
+    },
+    [router]
+  );
+
+  // Get current time greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/splash");
-  };
-
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#8b5cf6" />
-      </View>
-    );
+  // Initial loading screen
+  if (loading && !stats) {
+    return <LoadingScreen message="Loading dashboard..." />;
   }
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-purple-600 pt-14 pb-8 px-6 rounded-b-3xl">
-        <View className="flex-row items-center justify-between mb-6">
-          <View>
-            <Text className="text-white text-sm opacity-90">Hello,</Text>
-            <Text className="text-white text-2xl font-bold">
-              {user?.name || "Teacher"}
+    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
+        {/* Header */}
+        <View
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 20,
+            marginBottom: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: COLORS.gray200,
+            backgroundColor: COLORS.white,
+          }}
+        >
+          <Animated.View entering={FadeInDown.delay(100).springify()}>
+            <Text className="text-xs text-gray-600 mb-1">{getGreeting()}</Text>
+            <Text className="text-2xl font-semibold text-gray-900">
+              {stats?.teacherName || "Teacher"}
             </Text>
-          </View>
+          </Animated.View>
+
+          {/* Notification Icon */}
           <Pressable
-            onPress={handleLogout}
-            className="bg-white/20 p-3 rounded-full"
+            onPress={() => navigateTo("/(teacher)/announcements")}
+            className="absolute top-8 right-4 w-11 h-11 rounded-full bg-gray-100 items-center justify-center"
           >
-            <Ionicons name="log-out-outline" size={24} color="white" />
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={COLORS.gray700}
+            />
+            {stats?.pendingReviews ? (
+              <View className="absolute top-1.5 right-1.5 min-w-[16px] h-4 rounded-full bg-primary items-center justify-center px-1 border-2 border-white">
+                <Text className="text-[9px] font-bold text-white">
+                  {stats.pendingReviews}
+                </Text>
+              </View>
+            ) : null}
           </Pressable>
         </View>
 
-        {/* Quick Stats */}
-        <View className="flex-row justify-between gap-3">
-          <View className="bg-white/20 rounded-xl p-4 flex-1">
-            <Ionicons name="people" size={24} color="white" />
-            <Text className="text-white text-2xl font-bold mt-2">245</Text>
-            <Text className="text-white text-xs opacity-90">
-              Total Students
-            </Text>
+        {/* Stats Grid */}
+        <Animated.View
+          entering={FadeInDown.delay(200).springify()}
+          className="px-4 mb-6"
+        >
+          <Text className="text-base font-semibold text-gray-900 mb-3">
+            Overview
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {STAT_ITEMS.map((item, index) => (
+              <Animated.View
+                key={item.id}
+                entering={FadeInRight.delay(300 + index * 100).springify()}
+                style={{
+                  width: (SCREEN_WIDTH - 32 - 8) / 2,
+                }}
+              >
+                <Pressable
+                  onPress={() => navigateTo(item.route)}
+                  className="bg-white rounded-2xl p-4 min-h-[110px] border border-gray-200 active:bg-gray-50"
+                >
+                  <View
+                    className="w-10 h-10 rounded-xl items-center justify-center mb-3"
+                    style={{ backgroundColor: `${COLORS.primary}15` }}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={20}
+                      color={COLORS.primary}
+                    />
+                  </View>
+                  <Text className="text-2xl font-bold text-gray-900 mb-0.5">
+                    {loading ? "..." : stats?.[item.key] ?? 0}
+                  </Text>
+                  <Text className="text-xs text-gray-600">{item.title}</Text>
+                </Pressable>
+              </Animated.View>
+            ))}
           </View>
-          <View className="bg-white/20 rounded-xl p-4 flex-1">
-            <Ionicons name="document-text" size={24} color="white" />
-            <Text className="text-white text-2xl font-bold mt-2">18</Text>
-            <Text className="text-white text-xs opacity-90">Active Exams</Text>
-          </View>
-          <View className="bg-white/20 rounded-xl p-4 flex-1">
-            <Ionicons name="checkmark-circle" size={24} color="white" />
-            <Text className="text-white text-2xl font-bold mt-2">156</Text>
-            <Text className="text-white text-xs opacity-90">Graded</Text>
-          </View>
-        </View>
-      </View>
+        </Animated.View>
 
-      {/* Main Content */}
-      <View className="px-6 py-6">
         {/* Quick Actions */}
-        <View className="mb-6">
-          <Text className="text-gray-900 text-lg font-bold mb-4">
+        <Animated.View
+          entering={FadeInDown.delay(400).springify()}
+          className="px-4"
+        >
+          <Text className="text-base font-semibold text-gray-900 mb-3">
             Quick Actions
           </Text>
-          <View className="flex-row flex-wrap gap-3">
-            <Pressable className="bg-white rounded-2xl p-4 flex-1 min-w-[45%] shadow-sm border border-gray-100">
-              <View className="bg-purple-100 w-12 h-12 rounded-full items-center justify-center mb-3">
-                <Ionicons name="add-circle" size={24} color="#8b5cf6" />
-              </View>
-              <Text className="text-gray-900 font-semibold mb-1">
-                Create Exam
-              </Text>
-              <Text className="text-gray-500 text-xs">Add new assessment</Text>
-            </Pressable>
 
-            <Pressable className="bg-white rounded-2xl p-4 flex-1 min-w-[45%] shadow-sm border border-gray-100">
-              <View className="bg-blue-100 w-12 h-12 rounded-full items-center justify-center mb-3">
-                <Ionicons name="people" size={24} color="#3b82f6" />
-              </View>
-              <Text className="text-gray-900 font-semibold mb-1">
-                View Students
-              </Text>
-              <Text className="text-gray-500 text-xs">Manage classes</Text>
-            </Pressable>
-
-            <Pressable className="bg-white rounded-2xl p-4 flex-1 min-w-[45%] shadow-sm border border-gray-100">
-              <View className="bg-green-100 w-12 h-12 rounded-full items-center justify-center mb-3">
-                <Ionicons name="bar-chart" size={24} color="#22c55e" />
-              </View>
-              <Text className="text-gray-900 font-semibold mb-1">
-                Analytics
-              </Text>
-              <Text className="text-gray-500 text-xs">
-                Performance insights
-              </Text>
-            </Pressable>
-
-            <Pressable className="bg-white rounded-2xl p-4 flex-1 min-w-[45%] shadow-sm border border-gray-100">
-              <View className="bg-amber-100 w-12 h-12 rounded-full items-center justify-center mb-3">
-                <Ionicons name="folder-open" size={24} color="#f59e0b" />
-              </View>
-              <Text className="text-gray-900 font-semibold mb-1">
-                Resources
-              </Text>
-              <Text className="text-gray-500 text-xs">Study materials</Text>
-            </Pressable>
+          <View className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            {FEATURED_ACTIONS.map((action, index) => (
+              <Animated.View
+                key={action.id}
+                entering={FadeInRight.delay(500 + index * 100).springify()}
+              >
+                <Pressable
+                  onPress={() => navigateTo(action.route)}
+                  className={`flex-row items-center p-4 active:bg-gray-50 ${
+                    index < FEATURED_ACTIONS.length - 1
+                      ? "border-b border-gray-100"
+                      : ""
+                  }`}
+                >
+                  <View
+                    className="w-11 h-11 rounded-xl items-center justify-center mr-3"
+                    style={{ backgroundColor: `${COLORS.primary}15` }}
+                  >
+                    <Ionicons
+                      name={action.icon}
+                      size={22}
+                      color={COLORS.primary}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-medium text-gray-900 mb-0.5">
+                      {action.title}
+                    </Text>
+                    <Text className="text-xs text-gray-600">
+                      {action.subtitle}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={COLORS.gray400}
+                  />
+                </Pressable>
+              </Animated.View>
+            ))}
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Recent Exams */}
-        <View className="mb-6">
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-gray-900 text-lg font-bold">
-              Recent Exams
-            </Text>
-            <Pressable>
-              <Text className="text-purple-600 font-semibold">View All</Text>
-            </Pressable>
-          </View>
-
-          <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3">
-            <View className="flex-row items-start justify-between mb-3">
-              <View className="flex-1">
-                <Text className="text-gray-900 text-base font-semibold mb-1">
-                  Mathematics Final Exam
-                </Text>
-                <View className="flex-row items-center">
-                  <Ionicons name="people" size={14} color="#6b7280" />
-                  <Text className="text-gray-500 text-sm ml-1">
-                    85 students • Class 10
-                  </Text>
-                </View>
-              </View>
-              <View className="bg-green-100 px-3 py-1 rounded-full">
-                <Text className="text-green-600 text-xs font-semibold">
-                  Active
-                </Text>
-              </View>
-            </View>
-            <View className="border-t border-gray-100 pt-3 flex-row justify-between">
-              <View>
-                <Text className="text-gray-500 text-xs">Submissions</Text>
-                <Text className="text-gray-900 font-semibold">68/85</Text>
-              </View>
-              <View>
-                <Text className="text-gray-500 text-xs">Graded</Text>
-                <Text className="text-gray-900 font-semibold">52/68</Text>
-              </View>
-              <View>
-                <Text className="text-gray-500 text-xs">Avg Score</Text>
-                <Text className="text-gray-900 font-semibold">78%</Text>
-              </View>
-            </View>
-          </View>
-
-          <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <View className="flex-row items-start justify-between mb-3">
-              <View className="flex-1">
-                <Text className="text-gray-900 text-base font-semibold mb-1">
-                  Science Mid-Term Test
-                </Text>
-                <View className="flex-row items-center">
-                  <Ionicons name="people" size={14} color="#6b7280" />
-                  <Text className="text-gray-500 text-sm ml-1">
-                    92 students • Class 9
-                  </Text>
-                </View>
-              </View>
-              <View className="bg-orange-100 px-3 py-1 rounded-full">
-                <Text className="text-orange-600 text-xs font-semibold">
-                  Pending
-                </Text>
-              </View>
-            </View>
-            <View className="border-t border-gray-100 pt-3 flex-row justify-between">
-              <View>
-                <Text className="text-gray-500 text-xs">Submissions</Text>
-                <Text className="text-gray-900 font-semibold">45/92</Text>
-              </View>
-              <View>
-                <Text className="text-gray-500 text-xs">Graded</Text>
-                <Text className="text-gray-900 font-semibold">12/45</Text>
-              </View>
-              <View>
-                <Text className="text-gray-500 text-xs">Due Date</Text>
-                <Text className="text-gray-900 font-semibold">Dec 20</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Pending Tasks */}
-        <View>
-          <Text className="text-gray-900 text-lg font-bold mb-4">
-            Pending Tasks
-          </Text>
-          <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3">
-            <View className="flex-row items-center">
-              <View className="bg-red-100 w-10 h-10 rounded-full items-center justify-center mr-3">
-                <Ionicons name="alert-circle" size={20} color="#ef4444" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-gray-900 font-semibold">
-                  Grade pending submissions
-                </Text>
-                <Text className="text-gray-500 text-sm">
-                  16 submissions waiting
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-            </View>
-          </View>
-
-          <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <View className="flex-row items-center">
-              <View className="bg-blue-100 w-10 h-10 rounded-full items-center justify-center mr-3">
-                <Ionicons name="document-text" size={20} color="#3b82f6" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-gray-900 font-semibold">
-                  Upload study materials
-                </Text>
-                <Text className="text-gray-500 text-sm">
-                  For next week&apos;s class
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-            </View>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+        {/* Bottom spacing */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }

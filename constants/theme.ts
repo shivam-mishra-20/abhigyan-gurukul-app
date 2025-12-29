@@ -5,16 +5,29 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Primary brand color (rich green)
+const tintColorLight = '#8BC53F';
+const tintColorDark = '#ffffff';
+
+// Professional color palette using primary + neutrals and accents
+export const Palette = {
+  primary: '#4E74F9',
+  primaryOn: '#FFFFFF',
+  primaryDark: '#6EA530',
+  accent: '#0A7EA4',
+  neutral: '#687076',
+  background: '#FFFFFF',
+  surface: '#F7F9F8',
+  textPrimary: '#11181C',
+};
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: Palette.textPrimary,
+    background: Palette.background,
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: Palette.neutral,
+    tabIconDefault: Palette.neutral,
     tabIconSelected: tintColorLight,
   },
   dark: {
