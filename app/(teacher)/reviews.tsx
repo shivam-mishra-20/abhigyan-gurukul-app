@@ -1,6 +1,6 @@
 import { MathText } from "@/components/ui/MathText";
-import { COLORS } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
+import { useAppTheme } from "@/lib/context";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -68,6 +68,7 @@ interface ReviewView {
 }
 
 export default function TeacherReviews() {
+  const { isDark } = useAppTheme();
   const [pending, setPending] = useState<PendingAttempt[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -168,8 +169,8 @@ export default function TeacherReviews() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900">
+        <ActivityIndicator size="large" color="#8BC53F" />
       </View>
     );
   }
@@ -185,21 +186,28 @@ export default function TeacherReviews() {
     const percentage = getScorePercentage(score, maxScore);
 
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+      <SafeAreaView
+        className="flex-1 bg-gray-50 dark:bg-gray-900"
+        edges={["top"]}
+      >
         {/* Header */}
-        <View className="bg-white px-4 py-4 border-b border-gray-100">
+        <View className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-100 dark:border-gray-700">
           <View className="flex-row items-center">
             <Pressable
               onPress={() => setActiveReview(null)}
-              className="w-10 h-10 items-center justify-center mr-3 rounded-xl bg-gray-100 active:bg-gray-200"
+              className="w-10 h-10 items-center justify-center mr-3 rounded-xl bg-gray-100 dark:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700"
             >
-              <Ionicons name="arrow-back" size={22} color={COLORS.gray900} />
+              <Ionicons
+                name="arrow-back"
+                size={22}
+                color={isDark ? "#f3f4f6" : "#111827"}
+              />
             </Pressable>
             <View className="flex-1">
-              <Text className="text-xl font-bold text-gray-900">
+              <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 Review Submission
               </Text>
-              <Text className="text-sm text-gray-600">
+              <Text className="text-sm text-gray-600 dark:text-gray-400">
                 {activeReview.exam.title}
               </Text>
             </View>
@@ -208,26 +216,22 @@ export default function TeacherReviews() {
 
         <ScrollView className="flex-1 px-4 py-4">
           {/* Student Info */}
-          <View className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+          <View className="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-4 border border-gray-200 dark:border-gray-700">
             <View className="flex-row items-center mb-4">
-              <View
-                className="w-14 h-14 rounded-full items-center justify-center mr-4"
-                style={{ backgroundColor: `${COLORS.primary}15` }}
-              >
-                <Text
-                  className="font-bold text-xl"
-                  style={{ color: COLORS.primary }}
-                >
+              <View className="w-10 h-10 rounded-full items-center justify-center mr-3 bg-green-100 dark:bg-green-900">
+                <Text className="text-base font-bold text-green-600 dark:text-green-300">
                   {user?.name?.charAt(0) || "S"}
                 </Text>
               </View>
               <View className="flex-1">
-                <Text className="text-gray-900 font-bold text-lg">
+                <Text className="text-gray-900 dark:text-gray-100 font-bold text-lg">
                   {user?.name || "Student"}
                 </Text>
-                <Text className="text-sm text-gray-600">{user?.email}</Text>
+                <Text className="text-sm text-gray-600 dark:text-gray-400">
+                  {user?.email}
+                </Text>
                 {user?.classLevel && (
-                  <Text className="text-sm text-gray-500">
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">
                     Class {user.classLevel} • {user.batch}
                   </Text>
                 )}
@@ -235,14 +239,14 @@ export default function TeacherReviews() {
             </View>
 
             {/* Score */}
-            <View className="bg-gray-50 rounded-xl p-4">
+            <View className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-gray-600">Score</Text>
-                <Text className="text-gray-900 font-bold text-lg">
+                <Text className="text-gray-600 dark:text-gray-300">Score</Text>
+                <Text className="text-gray-900 dark:text-gray-100 font-bold text-lg">
                   {score} / {maxScore}
                 </Text>
               </View>
-              <View className="h-3 bg-gray-200 rounded-full overflow-hidden">
+              <View className="h-3 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
                 <View
                   className={`h-full ${
                     percentage >= 80
@@ -254,7 +258,7 @@ export default function TeacherReviews() {
                   style={{ width: `${percentage}%` }}
                 />
               </View>
-              <Text className="text-right mt-1 text-gray-500 text-sm">
+              <Text className="text-right mt-1 text-gray-500 dark:text-gray-400 text-sm">
                 {percentage}%
               </Text>
             </View>
@@ -263,7 +267,7 @@ export default function TeacherReviews() {
           {/* Answers by Section */}
           {activeReview.sections.map((section, sIdx) => (
             <View key={section._id} className="mb-4">
-              <Text className="text-gray-900 font-bold mb-3">
+              <Text className="text-gray-900 dark:text-gray-100 font-bold mb-3">
                 {section.title || `Section ${sIdx + 1}`}
               </Text>
 
@@ -278,10 +282,12 @@ export default function TeacherReviews() {
                 return (
                   <View
                     key={qId}
-                    className="bg-white rounded-2xl p-4 mb-3 border border-gray-200"
+                    className="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-3 border border-gray-200 dark:border-gray-700"
                   >
                     <View className="flex-row items-start justify-between mb-2">
-                      <Text className="text-sm text-gray-600">Q{qIdx + 1}</Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400">
+                        Q{qIdx + 1}
+                      </Text>
                       {answer?.scoreAwarded !== undefined && (
                         <View className="bg-green-100 px-2 py-1 rounded-lg">
                           <Text className="text-green-700 text-xs font-semibold">
@@ -303,12 +309,12 @@ export default function TeacherReviews() {
 
                       const bgColor =
                         isChosen && isCorrect
-                          ? "bg-green-50"
+                          ? "bg-green-50 dark:bg-green-900/30"
                           : isChosen && !isCorrect
-                          ? "bg-red-50"
+                          ? "bg-red-50 dark:bg-red-900/30"
                           : isCorrect
-                          ? "bg-green-50"
-                          : "bg-gray-50";
+                          ? "bg-green-50 dark:bg-green-900/30"
+                          : "bg-gray-50 dark:bg-gray-700";
 
                       return (
                         <View
@@ -316,14 +322,13 @@ export default function TeacherReviews() {
                           className={`p-3 rounded-xl mb-2 flex-row items-center ${bgColor}`}
                         >
                           <View
-                            className="w-6 h-6 rounded-full mr-3 items-center justify-center"
-                            style={{
-                              backgroundColor: isChosen
+                            className={`w-6 h-6 rounded-full mr-3 items-center justify-center ${
+                              isChosen
                                 ? isCorrect
-                                  ? COLORS.success
-                                  : COLORS.error
-                                : COLORS.gray200,
-                            }}
+                                  ? "bg-green-500"
+                                  : "bg-red-500"
+                                : "bg-gray-200 dark:bg-gray-700"
+                            }`}
                           >
                             {isChosen && (
                               <Ionicons
@@ -344,7 +349,7 @@ export default function TeacherReviews() {
                             <Ionicons
                               name="checkmark-circle"
                               size={16}
-                              color={COLORS.success}
+                              color="#10b981"
                             />
                           )}
                         </View>
@@ -353,7 +358,7 @@ export default function TeacherReviews() {
 
                     {/* Text Answer */}
                     {answer?.textAnswer && (
-                      <View className="bg-blue-50 p-3 rounded-xl mt-2">
+                      <View className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-xl mt-2">
                         <MathText text={answer.textAnswer} fontSize={14} />
                       </View>
                     )}
@@ -365,14 +370,13 @@ export default function TeacherReviews() {
         </ScrollView>
 
         {/* Publish Button */}
-        <View className="px-4 py-4 bg-white border-t border-gray-100">
+        <View className="px-4 py-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700">
           <Pressable
             onPress={publishAttempt}
             disabled={publishing}
-            className="rounded-2xl overflow-hidden active:opacity-80"
-            style={{
-              backgroundColor: publishing ? COLORS.gray300 : COLORS.primary,
-            }}
+            className={`rounded-2xl overflow-hidden active:opacity-80 ${
+              publishing ? "bg-gray-400" : "bg-green-500"
+            }`}
           >
             <View className="py-4 items-center flex-row justify-center">
               <Ionicons name="checkmark-circle" size={20} color="white" />
@@ -387,64 +391,43 @@ export default function TeacherReviews() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-gray-50 dark:bg-gray-900"
+      edges={["top"]}
+    >
       {/* Header */}
-      <View
-        style={{
-          paddingHorizontal: 10,
-          paddingVertical: 20,
-          marginBottom: 10,
-          borderBottomWidth: 1,
-          borderBottomColor: COLORS.gray200,
-          backgroundColor: COLORS.white,
-        }}
-      >
-        <Text className="text-gray-900 font-semibold text-2xl">
+      <View className="px-4 py-5 mb-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <Text className="text-gray-900 dark:text-gray-100 font-semibold text-2xl">
           Review Dashboard
         </Text>
-        <Text className="text-gray-600 text-sm mt-1">
+        <Text className="text-gray-600 dark:text-gray-400 text-sm mt-1">
           Grade and publish student submissions
         </Text>
       </View>
 
       {/* Stats */}
       <View className="flex-row px-4 py-4 gap-2">
-        <View
-          className="flex-1 rounded-2xl p-3.5"
-          style={{ backgroundColor: COLORS.infoLight }}
-        >
-          <Text className="text-xs font-medium" style={{ color: COLORS.info }}>
+        <View className="flex-1 rounded-2xl p-3.5 bg-blue-100 dark:bg-blue-900">
+          <Text className="text-xs font-medium text-blue-600 dark:text-blue-300">
             Total
           </Text>
-          <Text className="text-2xl font-bold text-gray-900">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {pending.length}
           </Text>
         </View>
-        <View
-          className="flex-1 rounded-2xl p-3.5"
-          style={{ backgroundColor: COLORS.warningLight }}
-        >
-          <Text
-            className="text-xs font-medium"
-            style={{ color: COLORS.warning }}
-          >
+        <View className="flex-1 rounded-2xl p-3.5 bg-amber-100 dark:bg-amber-900">
+          <Text className="text-xs font-medium text-amber-600 dark:text-amber-300">
             Pending
           </Text>
-          <Text className="text-2xl font-bold text-gray-900">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {pending.filter((p) => !p.resultPublished).length}
           </Text>
         </View>
-        <View
-          className="flex-1 rounded-2xl p-3.5"
-          style={{ backgroundColor: COLORS.successLight }}
-        >
-          <Text
-            className="text-xs font-medium"
-            style={{ color: COLORS.success }}
-          >
+        <View className="flex-1 rounded-2xl p-3.5 bg-green-100 dark:bg-green-900">
+          <Text className="text-xs font-medium text-green-600 dark:text-green-300">
             Published
           </Text>
-          <Text className="text-2xl font-bold text-gray-900">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {pending.filter((p) => p.resultPublished).length}
           </Text>
         </View>
@@ -457,16 +440,16 @@ export default function TeacherReviews() {
             <Pressable
               key={f}
               onPress={() => setFilter(f)}
-              className="px-4 py-2.5 rounded-full mr-2"
-              style={{
-                backgroundColor: filter === f ? COLORS.primary : COLORS.gray100,
-              }}
+              className={`px-4 py-2.5 rounded-full mr-2 ${
+                filter === f ? "bg-green-500" : "bg-gray-100 dark:bg-gray-800"
+              }`}
             >
               <Text
-                className="capitalize font-semibold"
-                style={{
-                  color: filter === f ? COLORS.white : COLORS.gray600,
-                }}
+                className={`capitalize font-semibold ${
+                  filter === f
+                    ? "text-white"
+                    : "text-gray-600 dark:text-gray-300"
+                }`}
               >
                 {f}
               </Text>
@@ -485,26 +468,25 @@ export default function TeacherReviews() {
               setRefreshing(true);
               loadPending();
             }}
-            colors={[COLORS.primary]}
+            colors={["#8BC53F"]}
           />
         }
       >
         {filteredAttempts.length === 0 ? (
           <View className="items-center py-16">
-            <View
-              className="w-20 h-20 rounded-full items-center justify-center mb-4"
-              style={{ backgroundColor: COLORS.successLight }}
-            >
+            <View className="w-20 h-20 rounded-full items-center justify-center mb-4 bg-green-100 dark:bg-green-900">
               <Ionicons
                 name="checkmark-circle-outline"
                 size={40}
-                color={COLORS.success}
+                color="#10b981"
               />
             </View>
-            <Text className="text-lg font-semibold text-gray-900 mb-2">
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
               All caught up!
             </Text>
-            <Text className="text-gray-500">No submissions to review</Text>
+            <Text className="text-gray-500 dark:text-gray-400">
+              No submissions to review
+            </Text>
           </View>
         ) : (
           filteredAttempts.map((attempt) => {
@@ -519,60 +501,52 @@ export default function TeacherReviews() {
               <Pressable
                 key={attempt._id}
                 onPress={() => openAttempt(attempt._id)}
-                className="bg-white rounded-2xl p-4 mb-3 border border-gray-200 active:bg-gray-50"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-3 border border-gray-200 dark:border-gray-700 active:bg-gray-50 dark:active:bg-gray-700"
               >
                 <View className="flex-row items-start justify-between mb-3">
                   <View className="flex-row items-center flex-1">
-                    <View
-                      className="w-11 h-11 rounded-xl items-center justify-center mr-3"
-                      style={{ backgroundColor: `${COLORS.primary}15` }}
-                    >
-                      <Text
-                        className="font-bold text-lg"
-                        style={{ color: COLORS.primary }}
-                      >
+                    <View className="w-11 h-11 rounded-xl items-center justify-center mr-3 bg-green-100 dark:bg-green-900">
+                      <Text className="font-bold text-lg text-green-600 dark:text-green-300">
                         {user?.name?.charAt(0) || "S"}
                       </Text>
                     </View>
                     <View className="flex-1">
-                      <Text className="text-base font-semibold text-gray-900">
+                      <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
                         {user?.name || "Student"}
                       </Text>
-                      <Text className="text-xs text-gray-500">
+                      <Text className="text-xs text-gray-500 dark:text-gray-400">
                         #{attempt._id.slice(-6)}
                       </Text>
                     </View>
                   </View>
                   <View
-                    className="px-2.5 py-1 rounded-full"
-                    style={{
-                      backgroundColor: attempt.resultPublished
-                        ? COLORS.successLight
-                        : COLORS.warningLight,
-                    }}
+                    className={`px-2.5 py-1 rounded-full ${
+                      attempt.resultPublished
+                        ? "bg-green-100 dark:bg-green-900"
+                        : "bg-amber-100 dark:bg-amber-900"
+                    }`}
                   >
                     <Text
-                      className="text-xs font-semibold"
-                      style={{
-                        color: attempt.resultPublished
-                          ? COLORS.success
-                          : COLORS.warning,
-                      }}
+                      className={`text-xs font-semibold ${
+                        attempt.resultPublished
+                          ? "text-green-600 dark:text-green-300"
+                          : "text-amber-600 dark:text-amber-300"
+                      }`}
                     >
                       {attempt.resultPublished ? "Published" : "Pending"}
                     </Text>
                   </View>
                 </View>
 
-                <View className="bg-gray-50 rounded-xl p-3 mb-3">
+                <View className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3 mb-3">
                   <Text
-                    className="text-sm font-semibold text-gray-700"
+                    className="text-sm font-semibold text-gray-700 dark:text-gray-200"
                     numberOfLines={1}
                   >
                     {exam?.title || "Exam"}
                   </Text>
                   {user?.classLevel && (
-                    <Text className="text-xs text-gray-500 mt-1">
+                    <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Class {user.classLevel} • {user.batch}
                     </Text>
                   )}
@@ -581,46 +555,47 @@ export default function TeacherReviews() {
                 {/* Score Bar */}
                 <View className="mb-3">
                   <View className="flex-row items-center justify-between mb-1.5">
-                    <Text className="text-sm text-gray-600">Score</Text>
-                    <Text className="text-base font-semibold text-gray-900">
+                    <Text className="text-sm text-gray-600 dark:text-gray-400">
+                      Score
+                    </Text>
+                    <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
                       {attempt.totalScore || 0} / {attempt.maxScore || 0}
                     </Text>
                   </View>
-                  <View className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <View className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <View
-                      className="h-full rounded-full"
+                      className={`h-full rounded-full ${
+                        percentage >= 80
+                          ? "bg-green-500"
+                          : percentage >= 60
+                          ? "bg-amber-500"
+                          : "bg-red-500"
+                      }`}
                       style={{
                         width: `${percentage}%`,
-                        backgroundColor:
-                          percentage >= 80
-                            ? COLORS.success
-                            : percentage >= 60
-                            ? COLORS.warning
-                            : COLORS.error,
                       }}
                     />
                   </View>
                 </View>
 
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-xs text-gray-500">
+                  <Text className="text-xs text-gray-500 dark:text-gray-400">
                     {formatDate(attempt.submittedAt)}
                   </Text>
                   <View className="flex-row items-center">
                     <Text
-                      className="font-semibold mr-1"
-                      style={{
-                        color: attempt.resultPublished
-                          ? COLORS.gray500
-                          : COLORS.primary,
-                      }}
+                      className={`font-semibold mr-1 ${
+                        attempt.resultPublished
+                          ? "text-gray-500 dark:text-gray-400"
+                          : "text-green-600 dark:text-green-400"
+                      }`}
                     >
                       {attempt.resultPublished ? "View" : "Review"}
                     </Text>
                     <Ionicons
                       name="chevron-forward"
                       size={16}
-                      color={COLORS.primary}
+                      color="#8BC53F"
                     />
                   </View>
                 </View>

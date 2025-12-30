@@ -3,26 +3,32 @@
  * Production-Ready Theme Configuration
  */
 
+export { getThemedColors, getThemedShadow } from './colors';
+
 // =============================================================================
 // COLOR PALETTE
 // =============================================================================
 
 export const THEME = {
-  // Primary brand color - Used sparingly for CTAs only
-  primary: '#4E74F9',
-  primaryHover: '#3A5FE8',
-  primaryLight: '#E8EDFE',
-  primaryMuted: 'rgba(78, 116, 249, 0.15)',
+  // Primary brand color - Indigo for main UI
+  primary: '#4F46E5',        // Indigo 600
+  primaryHover: '#4338CA',   // Indigo 700
+  primaryLight: '#EEF2FF',   // Indigo 50
+  primaryMuted: 'rgba(79, 70, 229, 0.15)',
+
+  // Tab bar color - Green (brand identifier in header only)
+  tabBar: '#059669',         // Emerald 600
+  tabBarLight: '#ECFDF5',    // Emerald 50
 
   // Secondary/Accent
-  secondary: '#10B981',
+  secondary: '#10B981',      // Green for success states
   secondaryLight: '#D1FAE5',
 
-  // Backgrounds - Clear hierarchy
+  // Backgrounds - Calm, academic
   bg: {
-    primary: '#FFFFFF',
-    secondary: '#F8FAFC',
-    tertiary: '#F1F5F9',
+    primary: '#FAFAFA',      // Off-white
+    secondary: '#F5F5F5',
+    tertiary: '#F0F0F0',
     elevated: '#FFFFFF',
   },
 
@@ -93,6 +99,104 @@ export const THEME = {
   gray800: '#1E293B',
   gray900: '#0F172A',
 } as const;
+
+// =============================================================================
+// DARK THEME - Professional dark mode colors
+// =============================================================================
+
+export const DARK_THEME = {
+  // Primary brand color - Indigo for dark mode
+  primary: '#6366F1',        // Indigo 500 - brighter for dark
+  primaryHover: '#4F46E5',   // Indigo 600
+  primaryLight: 'rgba(99, 102, 241, 0.2)',
+  primaryMuted: 'rgba(99, 102, 241, 0.1)',
+
+  // Tab bar - NO green in dark mode, use indigo
+  tabBar: '#6366F1',         // Indigo for tab bar
+  tabBarLight: 'rgba(99, 102, 241, 0.2)',
+
+  // Secondary/Accent - Green for success only
+  secondary: '#10B981',      // Green for success states only
+  secondaryLight: 'rgba(16, 185, 129, 0.2)',
+
+  // Backgrounds - Deep charcoal professional
+  bg: {
+    primary: '#18181B',      // Zinc 900
+    secondary: '#27272A',    // Zinc 800
+    tertiary: '#3F3F46',     // Zinc 700
+    elevated: '#27272A',
+  },
+
+  // Text - Clear hierarchy for dark mode
+  text: {
+    primary: '#FAFAFA',      // Zinc 50
+    secondary: '#D4D4D8',    // Zinc 300
+    tertiary: '#A1A1AA',     // Zinc 400
+    disabled: '#71717A',     // Zinc 500
+    inverse: '#18181B',      // Zinc 900
+  },
+
+  // Borders
+  border: {
+    light: '#27272A',
+    default: '#3F3F46',
+    dark: '#52525B',
+    focus: '#6366F1',        // Indigo focus
+  },
+
+  // Semantic colors - Green for success only
+  success: '#10B981',
+  successLight: 'rgba(16, 185, 129, 0.2)',
+  successDark: '#059669',
+
+  warning: '#FBBF24',
+  warningLight: 'rgba(251, 191, 36, 0.2)',
+  warningDark: '#F59E0B',
+
+  error: '#F87171',
+  errorLight: 'rgba(248, 113, 113, 0.2)',
+  errorDark: '#EF4444',
+
+  info: '#6366F1',           // Indigo for info
+  infoLight: 'rgba(99, 102, 241, 0.2)',
+  infoDark: '#4F46E5',
+
+  // Status colors (muted versions for badges)
+  status: {
+    published: 'rgba(16, 185, 129, 0.2)',    // Green for success
+    publishedText: '#10B981',
+    draft: 'rgba(251, 191, 36, 0.2)',
+    draftText: '#FBBF24',
+    pending: 'rgba(99, 102, 241, 0.2)',      // Indigo
+    pendingText: '#6366F1',
+    archived: '#3F3F46',
+    archivedText: '#A1A1AA',
+  },
+
+  // Overlay
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  overlayLight: 'rgba(0, 0, 0, 0.5)',
+
+  // White/Black constants (inverted for dark)
+  white: '#18181B',      // Zinc 900
+  black: '#FAFAFA',      // Zinc 50
+  transparent: 'transparent',
+
+  // Flat Gray Scale - zinc palette for dark mode
+  gray50: '#18181B',
+  gray100: '#27272A',
+  gray200: '#3F3F46',
+  gray300: '#52525B',
+  gray400: '#71717A',
+  gray500: '#A1A1AA',
+  gray600: '#D4D4D8',
+  gray700: '#E4E4E7',
+  gray800: '#F4F4F5',
+  gray900: '#FAFAFA',
+} as const;
+
+// Helper function to get theme-aware colors
+export const getTheme = (isDark: boolean) => isDark ? DARK_THEME : THEME;
 
 // =============================================================================
 // TYPOGRAPHY
@@ -296,7 +400,7 @@ export const SHADOWS = {
   },
   // Colored shadows for primary elements
   primary: {
-    shadowColor: '#4E74F9',
+    shadowColor: '#4F46E5',  // Indigo
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -349,16 +453,17 @@ export const ANIMATIONS = {
 // =============================================================================
 
 export const GRADIENTS = {
-  primary: ['#4E74F9', '#3A5FE8'] as [string, string],
-  primaryDiagonal: ['#5D83FF', '#3A5FE8'] as [string, string],
+  primary: ['#4F46E5', '#3730A3'] as [string, string],      // Indigo
+  primaryDiagonal: ['#6366F1', '#4338CA'] as [string, string],
   success: ['#34D399', '#10B981'] as [string, string],
   warning: ['#FBBF24', '#F59E0B'] as [string, string],
   error: ['#F87171', '#EF4444'] as [string, string],
   info: ['#60A5FA', '#3B82F6'] as [string, string],
   purple: ['#A78BFA', '#8B5CF6'] as [string, string],
   dark: ['#475569', '#1E293B'] as [string, string],
+  tabBar: ['#059669', '#047857'] as [string, string],       // Green for tab bar
   // Soft gradients for backgrounds
-  softPrimary: ['#E8EDFE', '#F8FAFC'] as [string, string],
+  softPrimary: ['#EEF2FF', '#F8FAFC'] as [string, string],  // Indigo
   softSuccess: ['#D1FAE5', '#F8FAFC'] as [string, string],
 } as const;
 

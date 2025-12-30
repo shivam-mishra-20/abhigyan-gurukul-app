@@ -1,13 +1,14 @@
 import { ErrorBoundary } from "@/components/shared";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { ToastProvider } from "@/lib/context";
+import { ThemeProvider, useAppTheme, ToastProvider } from "@/lib/context";
 import {
   DarkTheme,
   DefaultTheme,
-  ThemeProvider,
+  ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useColorScheme } from "nativewind";
+import { useEffect } from "react";
 import "react-native-reanimated";
 import "../global.css";
 
@@ -15,12 +16,19 @@ export const unstable_settings = {
   initialRouteName: "splash",
 };
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function RootLayoutContent() {
+  const { isDark } = useAppTheme();
+  const { setColorScheme } = useColorScheme();
+
+  // Sync NativeWind's color scheme with app theme
+  useEffect(() => {
+    setColorScheme(isDark ? "dark" : "light");
+  }, [isDark, setColorScheme]);
 
   return (
-    <ErrorBoundary>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <NavigationThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
         <ToastProvider>
           <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
             <Stack.Screen name="splash" options={{ headerShown: false }} />
@@ -38,8 +46,17 @@ export default function RootLayout() {
               }}
             />
           </Stack>
-          <StatusBar style="auto" />
         </ToastProvider>
+      </NavigationThemeProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <RootLayoutContent />
       </ThemeProvider>
     </ErrorBoundary>
   );

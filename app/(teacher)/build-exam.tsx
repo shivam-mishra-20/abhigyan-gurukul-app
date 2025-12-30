@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -16,10 +16,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 // Design System
-import { RADIUS, SHADOWS, SPACING, THEME, TYPOGRAPHY } from "@/lib/theme";
+import { RADIUS, SHADOWS, SPACING, TYPOGRAPHY, getTheme } from "@/lib/theme";
 
 // Hooks & Services
-import { useToast } from "@/lib/context";
+import { useToast, useAppTheme } from "@/lib/context";
 import { apiFetch } from "@/lib/services/api.service";
 
 // ============================================================================
@@ -129,11 +129,15 @@ const QuestionCard = ({
   isSelected,
   onToggle,
   onViewImage,
+  styles,
+  theme,
 }: {
   question: Question;
   isSelected: boolean;
   onToggle: () => void;
   onViewImage?: (url: string) => void;
+  styles: ReturnType<typeof createStyles>;
+  theme: ReturnType<typeof getTheme>;
 }) => {
   const [webViewHeight, setWebViewHeight] = useState(60);
 
@@ -221,7 +225,7 @@ const QuestionCard = ({
             </View>
           ) : null}
           {question.diagramUrl ? (
-            <Ionicons name="image" size={14} color={THEME.primary} />
+            <Ionicons name="image" size={14} color={theme.primary} />
           ) : null}
         </View>
       </View>
@@ -238,6 +242,11 @@ export default function BuildExamScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { isDark } = useAppTheme();
+
+  // Get theme-aware colors and styles
+  const theme = useMemo(() => getTheme(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Exam data
   const [exam, setExam] = useState<Exam | null>(null);
@@ -488,7 +497,7 @@ export default function BuildExamScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color={THEME.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Loading exam...</Text>
       </View>
     );
@@ -497,7 +506,7 @@ export default function BuildExamScreen() {
   if (!examId) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <Ionicons name="alert-circle" size={48} color={THEME.error} />
+        <Ionicons name="alert-circle" size={48} color={theme.error} />
         <Text style={styles.loadingText}>No exam ID provided</Text>
         <Pressable onPress={() => router.back()} style={styles.goBackButton}>
           <Text style={styles.goBackText}>Go Back</Text>
@@ -511,7 +520,7 @@ export default function BuildExamScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={THEME.gray900} />
+          <Ionicons name="arrow-back" size={24} color={theme.text.primary} />
         </Pressable>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle} numberOfLines={1}>
@@ -576,7 +585,7 @@ export default function BuildExamScreen() {
               style={styles.filterHeader}
             >
               <View style={styles.filterHeaderLeft}>
-                <Ionicons name="funnel" size={18} color={THEME.primary} />
+                <Ionicons name="funnel" size={18} color={theme.primary} />
                 <Text style={styles.cardTitle}>Filters</Text>
                 {selectedSubject || selectedChapter || selectedTopic ? (
                   <View style={styles.activeFilterBadge}>
@@ -587,7 +596,7 @@ export default function BuildExamScreen() {
               <Ionicons
                 name={showFilters ? "chevron-up" : "chevron-down"}
                 size={20}
-                color={THEME.gray400}
+                color={theme.text.tertiary}
               />
             </Pressable>
 
@@ -753,19 +762,23 @@ export default function BuildExamScreen() {
             <Ionicons
               name="search"
               size={18}
-              color={THEME.gray400}
+              color={theme.text.tertiary}
               style={styles.searchIcon}
             />
             <TextInput
               style={styles.searchInput}
               placeholder="Search questions..."
-              placeholderTextColor={THEME.gray400}
+              placeholderTextColor={theme.text.tertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 ? (
               <Pressable onPress={() => setSearchQuery("")}>
-                <Ionicons name="close-circle" size={18} color={THEME.gray400} />
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={theme.text.tertiary}
+                />
               </Pressable>
             ) : null}
           </View>
@@ -776,7 +789,7 @@ export default function BuildExamScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.cardTitle}>Exam Sections</Text>
             <Pressable onPress={addSection} style={styles.addSectionButton}>
-              <Ionicons name="add" size={18} color={THEME.primary} />
+              <Ionicons name="add" size={18} color={theme.primary} />
               <Text style={styles.addSectionText}>Add</Text>
             </Pressable>
           </View>
@@ -826,7 +839,7 @@ export default function BuildExamScreen() {
                     onPress={() => removeSection(expandedSection)}
                     style={styles.deleteSectionButton}
                   >
-                    <Ionicons name="trash" size={18} color={THEME.error} />
+                    <Ionicons name="trash" size={18} color={theme.error} />
                   </Pressable>
                 ) : null}
               </View>
@@ -866,7 +879,7 @@ export default function BuildExamScreen() {
                   <Ionicons
                     name="documents-outline"
                     size={24}
-                    color={THEME.gray300}
+                    color={theme.text.disabled}
                   />
                   <Text style={styles.emptySelectedText}>
                     No questions selected
@@ -889,7 +902,7 @@ export default function BuildExamScreen() {
 
             {questionsLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={THEME.primary} />
+                <ActivityIndicator size="small" color={theme.primary} />
                 <Text style={styles.loadingQuestionsText}>
                   Loading questions...
                 </Text>
@@ -899,7 +912,7 @@ export default function BuildExamScreen() {
                 <Ionicons
                   name="search-outline"
                   size={40}
-                  color={THEME.gray300}
+                  color={theme.text.disabled}
                 />
                 <Text style={styles.emptyText}>No questions found</Text>
                 <Text style={styles.emptySubtext}>
@@ -929,6 +942,8 @@ export default function BuildExamScreen() {
                         }
                       }}
                       onViewImage={setViewingImage}
+                      styles={styles}
+                      theme={theme}
                     />
                   );
                 })}
@@ -943,7 +958,7 @@ export default function BuildExamScreen() {
             <Ionicons
               name="information-circle"
               size={48}
-              color={THEME.gray300}
+              color={theme.text.disabled}
             />
             <Text style={styles.helpTitle}>Get Started</Text>
             <Text style={styles.helpText}>
@@ -989,463 +1004,464 @@ export default function BuildExamScreen() {
 }
 
 // ============================================================================
-// Styles
+// Styles Factory - Creates theme-aware styles
 // ============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: THEME.gray50,
-  },
-  centerContent: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    ...TYPOGRAPHY.body,
-    color: THEME.gray500,
-    marginTop: SPACING.md,
-  },
-  goBackButton: {
-    marginTop: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-    backgroundColor: THEME.primary,
-    borderRadius: RADIUS.lg,
-  },
-  goBackText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: THEME.gray100,
-  },
-  backButton: {
-    padding: SPACING.sm,
-    marginRight: SPACING.xs,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    ...TYPOGRAPHY.h3,
-    color: THEME.gray900,
-  },
-  headerSubtitle: {
-    ...TYPOGRAPHY.caption,
-    color: THEME.gray500,
-    marginTop: 2,
-  },
-  saveButton: {
-    backgroundColor: THEME.primary,
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.full,
-    alignItems: "center",
-    justifyContent: "center",
-    ...SHADOWS.md,
-  },
-  saveButtonDisabled: {
-    backgroundColor: THEME.gray300,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: SPACING.md,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    ...SHADOWS.sm,
-  },
-  cardTitle: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: THEME.gray900,
-  },
-  classGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  classChip: {
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.full,
-    backgroundColor: THEME.gray100,
-    borderWidth: 1,
-    borderColor: THEME.gray200,
-  },
-  classChipSelected: {
-    backgroundColor: `${THEME.primary}15`,
-    borderColor: THEME.primary,
-  },
-  classChipText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: THEME.gray600,
-  },
-  classChipTextSelected: {
-    color: THEME.primary,
-    fontWeight: "600",
-  },
-  filterHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  filterHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  activeFilterBadge: {
-    backgroundColor: THEME.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: RADIUS.full,
-  },
-  activeFilterBadgeText: {
-    fontSize: 10,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  filtersContent: {
-    marginTop: SPACING.md,
-  },
-  filterGroup: {
-    marginBottom: SPACING.md,
-  },
-  filterLabel: {
-    ...TYPOGRAPHY.smallBold,
-    color: THEME.gray700,
-    marginBottom: SPACING.sm,
-  },
-  filterChips: {
-    gap: SPACING.sm,
-  },
-  filterChip: {
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.full,
-    backgroundColor: THEME.gray100,
-    borderWidth: 1,
-    borderColor: THEME.gray200,
-  },
-  filterChipSelected: {
-    backgroundColor: `${THEME.primary}15`,
-    borderColor: THEME.primary,
-  },
-  filterChipText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: THEME.gray600,
-  },
-  filterChipTextSelected: {
-    color: THEME.primary,
-    fontWeight: "600",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: RADIUS.xl,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    ...SHADOWS.sm,
-  },
-  searchIcon: {
-    marginRight: SPACING.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...TYPOGRAPHY.body,
-    color: THEME.gray900,
-    paddingVertical: SPACING.md,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING.md,
-  },
-  addSectionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    borderRadius: RADIUS.lg,
-    backgroundColor: `${THEME.primary}10`,
-  },
-  addSectionText: {
-    ...TYPOGRAPHY.smallBold,
-    color: THEME.primary,
-  },
-  sectionTabs: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  sectionTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.lg,
-    backgroundColor: THEME.gray100,
-  },
-  sectionTabActive: {
-    backgroundColor: THEME.primary,
-  },
-  sectionTabText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: THEME.gray600,
-  },
-  sectionTabTextActive: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  sectionTabBadge: {
-    backgroundColor: "rgba(0,0,0,0.15)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: RADIUS.full,
-  },
-  sectionTabBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  activeSectionEditor: {
-    borderTopWidth: 1,
-    borderTopColor: THEME.gray100,
-    paddingTop: SPACING.md,
-  },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  sectionTitleInput: {
-    flex: 1,
-    ...TYPOGRAPHY.body,
-    color: THEME.gray900,
-    backgroundColor: THEME.gray50,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderWidth: 1,
-    borderColor: THEME.gray200,
-  },
-  deleteSectionButton: {
-    padding: SPACING.sm,
-  },
-  selectedQuestionsPreview: {
-    marginTop: SPACING.md,
-    padding: SPACING.sm,
-    backgroundColor: `${THEME.primary}08`,
-    borderRadius: RADIUS.lg,
-  },
-  selectedQuestionsTitle: {
-    ...TYPOGRAPHY.smallBold,
-    color: THEME.primary,
-    marginBottom: SPACING.sm,
-  },
-  selectedQuestionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    paddingVertical: 4,
-  },
-  selectedQuestionNumber: {
-    ...TYPOGRAPHY.smallBold,
-    color: THEME.primary,
-    width: 20,
-  },
-  selectedQuestionText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: THEME.gray700,
-    flex: 1,
-  },
-  moreQuestionsText: {
-    ...TYPOGRAPHY.caption,
-    color: THEME.gray500,
-    marginTop: SPACING.xs,
-  },
-  emptySelectedQuestions: {
-    marginTop: SPACING.md,
-    alignItems: "center",
-    paddingVertical: SPACING.lg,
-    borderWidth: 1,
-    borderColor: THEME.gray200,
-    borderStyle: "dashed",
-    borderRadius: RADIUS.lg,
-  },
-  emptySelectedText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: THEME.gray400,
-    marginTop: SPACING.xs,
-  },
-  questionBankHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING.md,
-  },
-  questionCount: {
-    ...TYPOGRAPHY.caption,
-    color: THEME.gray500,
-  },
-  loadingContainer: {
-    padding: SPACING.xl,
-    alignItems: "center",
-  },
-  loadingQuestionsText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: THEME.gray500,
-    marginTop: SPACING.sm,
-  },
-  emptyContainer: {
-    padding: SPACING.xl,
-    alignItems: "center",
-  },
-  emptyText: {
-    ...TYPOGRAPHY.body,
-    color: THEME.gray400,
-    marginTop: SPACING.sm,
-  },
-  emptySubtext: {
-    ...TYPOGRAPHY.caption,
-    color: THEME.gray400,
-    marginTop: 4,
-  },
-  questionsList: {
-    gap: SPACING.sm,
-  },
-  questionCard: {
-    flexDirection: "row",
-    padding: SPACING.md,
-    backgroundColor: THEME.gray50,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: THEME.gray200,
-  },
-  questionCardSelected: {
-    backgroundColor: `${THEME.primary}08`,
-    borderColor: THEME.primary,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: THEME.gray300,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: SPACING.md,
-    marginTop: 2,
-  },
-  checkboxChecked: {
-    backgroundColor: THEME.primary,
-    borderColor: THEME.primary,
-  },
-  questionCardContent: {
-    flex: 1,
-  },
-  questionMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-    marginTop: SPACING.sm,
-    flexWrap: "wrap",
-  },
-  metaBadge: {
-    backgroundColor: THEME.gray200,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: RADIUS.full,
-  },
-  metaBadgeText: {
-    fontSize: 11,
-    color: THEME.gray600,
-    fontWeight: "500",
-  },
-  metaBadgeEasy: {
-    backgroundColor: "#dcfce7",
-  },
-  metaBadgeMedium: {
-    backgroundColor: "#fef3c7",
-  },
-  metaBadgeHard: {
-    backgroundColor: "#fee2e2",
-  },
-  diagramContainer: {
-    marginTop: SPACING.sm,
-    borderRadius: RADIUS.lg,
-    overflow: "hidden",
-    position: "relative",
-  },
-  diagramThumbnail: {
-    width: "100%",
-    height: 120,
-    backgroundColor: THEME.gray100,
-  },
-  diagramOverlay: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    padding: 6,
-    borderRadius: RADIUS.lg,
-  },
-  helpContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: SPACING["3xl"],
-  },
-  helpTitle: {
-    ...TYPOGRAPHY.h3,
-    color: THEME.gray400,
-    marginTop: SPACING.md,
-  },
-  helpText: {
-    ...TYPOGRAPHY.body,
-    color: THEME.gray400,
-    textAlign: "center",
-    marginTop: SPACING.sm,
-    paddingHorizontal: SPACING.xl,
-  },
-  imageModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  imageModalContent: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fullImage: {
-    width: "90%",
-    height: "80%",
-  },
-  closeImageButton: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    padding: 10,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: RADIUS.full,
-  },
-});
+const createStyles = (THEME: ReturnType<typeof getTheme>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: THEME.bg.secondary,
+    },
+    centerContent: {
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      ...TYPOGRAPHY.body,
+      color: THEME.text.tertiary,
+      marginTop: SPACING.md,
+    },
+    goBackButton: {
+      marginTop: SPACING.lg,
+      paddingVertical: SPACING.sm,
+      paddingHorizontal: SPACING.lg,
+      backgroundColor: THEME.primary,
+      borderRadius: RADIUS.lg,
+    },
+    goBackText: {
+      color: THEME.text.inverse,
+      fontWeight: "600",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.md,
+      backgroundColor: THEME.bg.elevated,
+      borderBottomWidth: 1,
+      borderBottomColor: THEME.border.light,
+    },
+    backButton: {
+      padding: SPACING.sm,
+      marginRight: SPACING.xs,
+    },
+    headerContent: {
+      flex: 1,
+    },
+    headerTitle: {
+      ...TYPOGRAPHY.h3,
+      color: THEME.text.primary,
+    },
+    headerSubtitle: {
+      ...TYPOGRAPHY.caption,
+      color: THEME.text.tertiary,
+      marginTop: 2,
+    },
+    saveButton: {
+      backgroundColor: THEME.primary,
+      width: 44,
+      height: 44,
+      borderRadius: RADIUS.full,
+      alignItems: "center",
+      justifyContent: "center",
+      ...SHADOWS.md,
+    },
+    saveButtonDisabled: {
+      backgroundColor: THEME.text.disabled,
+    },
+    content: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: SPACING.md,
+    },
+    card: {
+      backgroundColor: THEME.bg.elevated,
+      borderRadius: RADIUS.xl,
+      padding: SPACING.md,
+      marginBottom: SPACING.md,
+      ...SHADOWS.sm,
+    },
+    cardTitle: {
+      ...TYPOGRAPHY.bodyMedium,
+      color: THEME.text.primary,
+    },
+    classGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: SPACING.sm,
+      marginTop: SPACING.md,
+    },
+    classChip: {
+      paddingVertical: SPACING.sm,
+      paddingHorizontal: SPACING.md,
+      borderRadius: RADIUS.full,
+      backgroundColor: THEME.bg.tertiary,
+      borderWidth: 1,
+      borderColor: THEME.border.default,
+    },
+    classChipSelected: {
+      backgroundColor: THEME.primaryLight,
+      borderColor: THEME.primary,
+    },
+    classChipText: {
+      ...TYPOGRAPHY.bodySmall,
+      color: THEME.text.secondary,
+    },
+    classChipTextSelected: {
+      color: THEME.primary,
+      fontWeight: "600",
+    },
+    filterHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    filterHeaderLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    activeFilterBadge: {
+      backgroundColor: THEME.primary,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: RADIUS.full,
+    },
+    activeFilterBadgeText: {
+      fontSize: 10,
+      color: THEME.text.inverse,
+      fontWeight: "600",
+    },
+    filtersContent: {
+      marginTop: SPACING.md,
+    },
+    filterGroup: {
+      marginBottom: SPACING.md,
+    },
+    filterLabel: {
+      ...TYPOGRAPHY.smallBold,
+      color: THEME.text.secondary,
+      marginBottom: SPACING.sm,
+    },
+    filterChips: {
+      gap: SPACING.sm,
+    },
+    filterChip: {
+      paddingVertical: SPACING.xs,
+      paddingHorizontal: SPACING.md,
+      borderRadius: RADIUS.full,
+      backgroundColor: THEME.bg.tertiary,
+      borderWidth: 1,
+      borderColor: THEME.border.default,
+    },
+    filterChipSelected: {
+      backgroundColor: THEME.primaryLight,
+      borderColor: THEME.primary,
+    },
+    filterChipText: {
+      ...TYPOGRAPHY.bodySmall,
+      color: THEME.text.secondary,
+    },
+    filterChipTextSelected: {
+      color: THEME.primary,
+      fontWeight: "600",
+    },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: THEME.bg.elevated,
+      borderRadius: RADIUS.xl,
+      paddingHorizontal: SPACING.md,
+      marginBottom: SPACING.md,
+      ...SHADOWS.sm,
+    },
+    searchIcon: {
+      marginRight: SPACING.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...TYPOGRAPHY.body,
+      color: THEME.text.primary,
+      paddingVertical: SPACING.md,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: SPACING.md,
+    },
+    addSectionButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingVertical: SPACING.xs,
+      paddingHorizontal: SPACING.sm,
+      borderRadius: RADIUS.lg,
+      backgroundColor: THEME.primaryMuted,
+    },
+    addSectionText: {
+      ...TYPOGRAPHY.smallBold,
+      color: THEME.primary,
+    },
+    sectionTabs: {
+      flexDirection: "row",
+      gap: SPACING.sm,
+      marginBottom: SPACING.md,
+    },
+    sectionTab: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: SPACING.sm,
+      paddingHorizontal: SPACING.md,
+      borderRadius: RADIUS.lg,
+      backgroundColor: THEME.bg.tertiary,
+    },
+    sectionTabActive: {
+      backgroundColor: THEME.primary,
+    },
+    sectionTabText: {
+      ...TYPOGRAPHY.bodySmall,
+      color: THEME.text.secondary,
+    },
+    sectionTabTextActive: {
+      color: THEME.text.inverse,
+      fontWeight: "600",
+    },
+    sectionTabBadge: {
+      backgroundColor: "rgba(0,0,0,0.15)",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: RADIUS.full,
+    },
+    sectionTabBadgeText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: THEME.text.inverse,
+    },
+    activeSectionEditor: {
+      borderTopWidth: 1,
+      borderTopColor: THEME.border.light,
+      paddingTop: SPACING.md,
+    },
+    sectionTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    sectionTitleInput: {
+      flex: 1,
+      ...TYPOGRAPHY.body,
+      color: THEME.text.primary,
+      backgroundColor: THEME.bg.secondary,
+      borderRadius: RADIUS.lg,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      borderWidth: 1,
+      borderColor: THEME.border.default,
+    },
+    deleteSectionButton: {
+      padding: SPACING.sm,
+    },
+    selectedQuestionsPreview: {
+      marginTop: SPACING.md,
+      padding: SPACING.sm,
+      backgroundColor: THEME.primaryMuted,
+      borderRadius: RADIUS.lg,
+    },
+    selectedQuestionsTitle: {
+      ...TYPOGRAPHY.smallBold,
+      color: THEME.primary,
+      marginBottom: SPACING.sm,
+    },
+    selectedQuestionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+      paddingVertical: 4,
+    },
+    selectedQuestionNumber: {
+      ...TYPOGRAPHY.smallBold,
+      color: THEME.primary,
+      width: 20,
+    },
+    selectedQuestionText: {
+      ...TYPOGRAPHY.bodySmall,
+      color: THEME.text.secondary,
+      flex: 1,
+    },
+    moreQuestionsText: {
+      ...TYPOGRAPHY.caption,
+      color: THEME.text.tertiary,
+      marginTop: SPACING.xs,
+    },
+    emptySelectedQuestions: {
+      marginTop: SPACING.md,
+      alignItems: "center",
+      paddingVertical: SPACING.lg,
+      borderWidth: 1,
+      borderColor: THEME.border.default,
+      borderStyle: "dashed",
+      borderRadius: RADIUS.lg,
+    },
+    emptySelectedText: {
+      ...TYPOGRAPHY.bodySmall,
+      color: THEME.text.disabled,
+      marginTop: SPACING.xs,
+    },
+    questionBankHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: SPACING.md,
+    },
+    questionCount: {
+      ...TYPOGRAPHY.caption,
+      color: THEME.text.tertiary,
+    },
+    loadingContainer: {
+      padding: SPACING.xl,
+      alignItems: "center",
+    },
+    loadingQuestionsText: {
+      ...TYPOGRAPHY.bodySmall,
+      color: THEME.text.tertiary,
+      marginTop: SPACING.sm,
+    },
+    emptyContainer: {
+      padding: SPACING.xl,
+      alignItems: "center",
+    },
+    emptyText: {
+      ...TYPOGRAPHY.body,
+      color: THEME.text.disabled,
+      marginTop: SPACING.sm,
+    },
+    emptySubtext: {
+      ...TYPOGRAPHY.caption,
+      color: THEME.text.disabled,
+      marginTop: 4,
+    },
+    questionsList: {
+      gap: SPACING.sm,
+    },
+    questionCard: {
+      flexDirection: "row",
+      padding: SPACING.md,
+      backgroundColor: THEME.bg.secondary,
+      borderRadius: RADIUS.lg,
+      borderWidth: 1,
+      borderColor: THEME.border.default,
+    },
+    questionCardSelected: {
+      backgroundColor: THEME.primaryMuted,
+      borderColor: THEME.primary,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: THEME.text.disabled,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: SPACING.md,
+      marginTop: 2,
+    },
+    checkboxChecked: {
+      backgroundColor: THEME.primary,
+      borderColor: THEME.primary,
+    },
+    questionCardContent: {
+      flex: 1,
+    },
+    questionMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+      marginTop: SPACING.sm,
+      flexWrap: "wrap",
+    },
+    metaBadge: {
+      backgroundColor: THEME.bg.tertiary,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: RADIUS.full,
+    },
+    metaBadgeText: {
+      fontSize: 11,
+      color: THEME.text.secondary,
+      fontWeight: "500",
+    },
+    metaBadgeEasy: {
+      backgroundColor: THEME.successLight,
+    },
+    metaBadgeMedium: {
+      backgroundColor: THEME.warningLight,
+    },
+    metaBadgeHard: {
+      backgroundColor: THEME.errorLight,
+    },
+    diagramContainer: {
+      marginTop: SPACING.sm,
+      borderRadius: RADIUS.lg,
+      overflow: "hidden",
+      position: "relative",
+    },
+    diagramThumbnail: {
+      width: "100%",
+      height: 120,
+      backgroundColor: THEME.bg.tertiary,
+    },
+    diagramOverlay: {
+      position: "absolute",
+      bottom: 8,
+      right: 8,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      padding: 6,
+      borderRadius: RADIUS.lg,
+    },
+    helpContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: SPACING["3xl"],
+    },
+    helpTitle: {
+      ...TYPOGRAPHY.h3,
+      color: THEME.text.disabled,
+      marginTop: SPACING.md,
+    },
+    helpText: {
+      ...TYPOGRAPHY.body,
+      color: THEME.text.disabled,
+      textAlign: "center",
+      marginTop: SPACING.sm,
+      paddingHorizontal: SPACING.xl,
+    },
+    imageModalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.9)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    imageModalContent: {
+      width: "100%",
+      height: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    fullImage: {
+      width: "90%",
+      height: "80%",
+    },
+    closeImageButton: {
+      position: "absolute",
+      top: 50,
+      right: 20,
+      padding: 10,
+      backgroundColor: "rgba(255,255,255,0.2)",
+      borderRadius: RADIUS.full,
+    },
+  });

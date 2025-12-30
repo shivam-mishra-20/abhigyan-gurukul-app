@@ -1,5 +1,6 @@
-import { COLORS } from "@/constants/colors";
+import { COLORS, getColors } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
+import { useAppTheme } from "@/lib/context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -64,6 +65,9 @@ interface StudentReport {
 export default function StudentReportPage() {
   const router = useRouter();
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
+  const { isDark } = useAppTheme();
+  const colors = getColors(isDark);
+
   const [report, setReport] = useState<StudentReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -114,12 +118,12 @@ export default function StudentReportPage() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={{ marginTop: 12, color: COLORS.gray500 }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: 12, color: colors.gray500 }}>
             Loading report...
           </Text>
         </View>
@@ -129,7 +133,7 @@ export default function StudentReportPage() {
 
   if (!report) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <View
           style={{
             flex: 1,
@@ -141,16 +145,16 @@ export default function StudentReportPage() {
           <Ionicons
             name="alert-circle-outline"
             size={64}
-            color={COLORS.gray300}
+            color={colors.gray300}
           />
-          <Text style={{ marginTop: 12, color: COLORS.gray500, fontSize: 16 }}>
+          <Text style={{ marginTop: 12, color: colors.gray500, fontSize: 16 }}>
             Report not found
           </Text>
           <Pressable
             onPress={() => router.back()}
             style={{
               marginTop: 20,
-              backgroundColor: COLORS.primary,
+              backgroundColor: colors.primary,
               paddingHorizontal: 24,
               paddingVertical: 12,
               borderRadius: 8,
@@ -165,13 +169,13 @@ export default function StudentReportPage() {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: "#F9FAFB" }}
+      style={{ flex: 1, backgroundColor: colors.backgroundSecondary }}
       edges={["top"]}
     >
       {/* Header */}
       <View
         style={{
-          backgroundColor: COLORS.primary,
+          backgroundColor: colors.primary,
           paddingHorizontal: 20,
           paddingVertical: 16,
           flexDirection: "row",
@@ -222,17 +226,17 @@ export default function StudentReportPage() {
       >
         <View style={{ width: "50%", padding: 8, alignItems: "center" }}>
           <Text
-            style={{ fontSize: 28, fontWeight: "700", color: COLORS.primary }}
+            style={{ fontSize: 28, fontWeight: "700", color: colors.primary }}
           >
             {report.overallStats.avgScore.toFixed(0)}%
           </Text>
-          <Text style={{ fontSize: 12, color: COLORS.gray500 }}>Avg Score</Text>
+          <Text style={{ fontSize: 12, color: colors.gray500 }}>Avg Score</Text>
         </View>
         <View style={{ width: "50%", padding: 8, alignItems: "center" }}>
           <Text style={{ fontSize: 28, fontWeight: "700", color: "#059669" }}>
             {report.overallStats.bestScore.toFixed(0)}%
           </Text>
-          <Text style={{ fontSize: 12, color: COLORS.gray500 }}>
+          <Text style={{ fontSize: 12, color: colors.gray500 }}>
             Best Score
           </Text>
         </View>
@@ -240,7 +244,7 @@ export default function StudentReportPage() {
           <Text style={{ fontSize: 28, fontWeight: "700", color: "#3B82F6" }}>
             {report.overallStats.totalAttempts}
           </Text>
-          <Text style={{ fontSize: 12, color: COLORS.gray500 }}>
+          <Text style={{ fontSize: 12, color: colors.gray500 }}>
             Exams Taken
           </Text>
         </View>
@@ -248,7 +252,7 @@ export default function StudentReportPage() {
           <Text style={{ fontSize: 28, fontWeight: "700", color: "#8B5CF6" }}>
             {report.overallStats.overallAccuracy.toFixed(0)}%
           </Text>
-          <Text style={{ fontSize: 12, color: COLORS.gray500 }}>Accuracy</Text>
+          <Text style={{ fontSize: 12, color: colors.gray500 }}>Accuracy</Text>
         </View>
       </View>
 
@@ -279,7 +283,7 @@ export default function StudentReportPage() {
                 textAlign: "center",
                 fontWeight: "600",
                 fontSize: 13,
-                color: activeTab === tab ? COLORS.gray900 : COLORS.gray500,
+                color: activeTab === tab ? colors.gray900 : colors.gray500,
                 textTransform: "capitalize",
               }}
             >
@@ -299,7 +303,7 @@ export default function StudentReportPage() {
               setRefreshing(true);
               fetchReport();
             }}
-            colors={[COLORS.primary]}
+            colors={[colors.primary]}
           />
         }
       >
@@ -310,7 +314,7 @@ export default function StudentReportPage() {
               style={{
                 fontSize: 16,
                 fontWeight: "700",
-                color: COLORS.gray900,
+                color: colors.gray900,
                 marginBottom: 12,
               }}
             >
@@ -325,7 +329,7 @@ export default function StudentReportPage() {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: COLORS.gray500 }}>
+                <Text style={{ color: colors.gray500 }}>
                   No subject data available
                 </Text>
               </View>
@@ -349,7 +353,7 @@ export default function StudentReportPage() {
                         style={{
                           fontSize: 15,
                           fontWeight: "600",
-                          color: COLORS.gray900,
+                          color: colors.gray900,
                         }}
                       >
                         {subject.subject}
@@ -357,7 +361,7 @@ export default function StudentReportPage() {
                       <Text
                         style={{
                           fontSize: 12,
-                          color: COLORS.gray500,
+                          color: colors.gray500,
                           marginTop: 2,
                         }}
                       >
@@ -392,7 +396,7 @@ export default function StudentReportPage() {
               style={{
                 fontSize: 16,
                 fontWeight: "700",
-                color: COLORS.gray900,
+                color: colors.gray900,
                 marginTop: 20,
                 marginBottom: 12,
               }}
@@ -427,12 +431,12 @@ export default function StudentReportPage() {
                     style={{
                       fontSize: 18,
                       fontWeight: "700",
-                      color: COLORS.gray900,
+                      color: colors.gray900,
                     }}
                   >
                     {formatTime(report.overallStats.totalTimeSpent)}
                   </Text>
-                  <Text style={{ fontSize: 12, color: COLORS.gray500 }}>
+                  <Text style={{ fontSize: 12, color: colors.gray500 }}>
                     Total Time Spent
                   </Text>
                 </View>
@@ -447,7 +451,7 @@ export default function StudentReportPage() {
               style={{
                 fontSize: 16,
                 fontWeight: "700",
-                color: COLORS.gray900,
+                color: colors.gray900,
                 marginBottom: 12,
               }}
             >
@@ -465,9 +469,9 @@ export default function StudentReportPage() {
                 <Ionicons
                   name="bar-chart-outline"
                   size={48}
-                  color={COLORS.gray300}
+                  color={colors.gray300}
                 />
-                <Text style={{ color: COLORS.gray500, marginTop: 8 }}>
+                <Text style={{ color: colors.gray500, marginTop: 8 }}>
                   No chapter data available
                 </Text>
               </View>
@@ -496,7 +500,7 @@ export default function StudentReportPage() {
                           style={{
                             fontSize: 14,
                             fontWeight: "600",
-                            color: COLORS.gray900,
+                            color: colors.gray900,
                           }}
                         >
                           {chapter.chapter}
@@ -504,7 +508,7 @@ export default function StudentReportPage() {
                         <Text
                           style={{
                             fontSize: 12,
-                            color: COLORS.gray500,
+                            color: colors.gray500,
                             marginTop: 2,
                           }}
                         >
@@ -546,7 +550,7 @@ export default function StudentReportPage() {
                     <Text
                       style={{
                         fontSize: 11,
-                        color: COLORS.gray500,
+                        color: colors.gray500,
                         marginTop: 6,
                       }}
                     >
@@ -565,7 +569,7 @@ export default function StudentReportPage() {
               style={{
                 fontSize: 16,
                 fontWeight: "700",
-                color: COLORS.gray900,
+                color: colors.gray900,
                 marginBottom: 12,
               }}
             >
@@ -583,9 +587,9 @@ export default function StudentReportPage() {
                 <Ionicons
                   name="document-text-outline"
                   size={48}
-                  color={COLORS.gray300}
+                  color={colors.gray300}
                 />
-                <Text style={{ color: COLORS.gray500, marginTop: 8 }}>
+                <Text style={{ color: colors.gray500, marginTop: 8 }}>
                   No exam attempts yet
                 </Text>
               </View>
@@ -614,7 +618,7 @@ export default function StudentReportPage() {
                           style={{
                             fontSize: 14,
                             fontWeight: "600",
-                            color: COLORS.gray900,
+                            color: colors.gray900,
                           }}
                           numberOfLines={1}
                         >
@@ -623,7 +627,7 @@ export default function StudentReportPage() {
                         <Text
                           style={{
                             fontSize: 12,
-                            color: COLORS.gray500,
+                            color: colors.gray500,
                             marginTop: 2,
                           }}
                         >
@@ -661,7 +665,7 @@ export default function StudentReportPage() {
                         >
                           {attempt.correctAnswers}
                         </Text>
-                        <Text style={{ fontSize: 11, color: COLORS.gray500 }}>
+                        <Text style={{ fontSize: 11, color: colors.gray500 }}>
                           Correct
                         </Text>
                       </View>
@@ -675,7 +679,7 @@ export default function StudentReportPage() {
                         >
                           {attempt.wrongAnswers}
                         </Text>
-                        <Text style={{ fontSize: 11, color: COLORS.gray500 }}>
+                        <Text style={{ fontSize: 11, color: colors.gray500 }}>
                           Wrong
                         </Text>
                       </View>
@@ -689,7 +693,7 @@ export default function StudentReportPage() {
                         >
                           {attempt.skipped}
                         </Text>
-                        <Text style={{ fontSize: 11, color: COLORS.gray500 }}>
+                        <Text style={{ fontSize: 11, color: colors.gray500 }}>
                           Skipped
                         </Text>
                       </View>
@@ -703,7 +707,7 @@ export default function StudentReportPage() {
                         >
                           {formatTime(attempt.timeTaken)}
                         </Text>
-                        <Text style={{ fontSize: 11, color: COLORS.gray500 }}>
+                        <Text style={{ fontSize: 11, color: colors.gray500 }}>
                           Time
                         </Text>
                       </View>

@@ -1,6 +1,7 @@
-import { COLORS, GRADIENTS, SHADOWS } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
 import { getUser, logout } from "@/lib/auth";
+import { useAppTheme } from "@/lib/context";
+import { GRADIENTS, SHADOWS } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -27,6 +28,7 @@ const MenuItem = ({
   toggle = false,
   toggleValue = false,
   onToggle,
+  isDark = false,
 }: {
   icon: string;
   label: string;
@@ -36,6 +38,7 @@ const MenuItem = ({
   toggle?: boolean;
   toggleValue?: boolean;
   onToggle?: (value: boolean) => void;
+  isDark?: boolean;
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -58,7 +61,7 @@ const MenuItem = ({
           alignItems: "center",
           paddingVertical: 16,
           paddingHorizontal: 16,
-          backgroundColor: COLORS.white,
+          backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
         }}
       >
         <View
@@ -66,7 +69,9 @@ const MenuItem = ({
             width: 40,
             height: 40,
             borderRadius: 12,
-            backgroundColor: danger ? COLORS.errorLight : COLORS.primaryBg,
+            backgroundColor: danger 
+              ? (isDark ? "rgba(239, 68, 68, 0.2)" : "#FEE2E2") 
+              : (isDark ? "rgba(139, 197, 63, 0.2)" : "#F0F9E8"),
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -74,7 +79,7 @@ const MenuItem = ({
           <Ionicons
             name={icon as any}
             size={20}
-            color={danger ? COLORS.error : COLORS.primary}
+            color={danger ? "#EF4444" : "#4E74F9"}
           />
         </View>
         <View style={{ flex: 1, marginLeft: 14 }}>
@@ -82,13 +87,13 @@ const MenuItem = ({
             style={{
               fontSize: 15,
               fontWeight: "600",
-              color: danger ? COLORS.error : COLORS.gray800,
+              color: danger ? "#EF4444" : (isDark ? "#F3F4F6" : "#1F2937"),
             }}
           >
             {label}
           </Text>
           {value && (
-            <Text style={{ fontSize: 13, color: COLORS.gray500, marginTop: 2 }}>
+            <Text style={{ fontSize: 13, color: isDark ? "#9CA3AF" : "#6B7280", marginTop: 2 }}>
               {value}
             </Text>
           )}
@@ -97,11 +102,11 @@ const MenuItem = ({
           <Switch
             value={toggleValue}
             onValueChange={onToggle}
-            trackColor={{ false: COLORS.gray200, true: COLORS.primaryLight }}
-            thumbColor={toggleValue ? COLORS.primary : COLORS.gray400}
+            trackColor={{ false: isDark ? "#374151" : "#E5E7EB", true: "#4E74F9" }}
+            thumbColor={toggleValue ? "#FFFFFF" : (isDark ? "#6B7280" : "#9CA3AF")}
           />
         ) : (
-          <Ionicons name="chevron-forward" size={20} color={COLORS.gray400} />
+          <Ionicons name="chevron-forward" size={20} color={isDark ? "#6B7280" : "#9CA3AF"} />
         )}
       </Pressable>
     </Animated.View>
@@ -114,11 +119,13 @@ const StatBadge = ({
   label,
   value,
   color,
+  isDark = false,
 }: {
   icon: string;
   label: string;
   value: string | number;
   color: string;
+  isDark?: boolean;
 }) => (
   <View
     style={{
@@ -140,10 +147,10 @@ const StatBadge = ({
     >
       <Ionicons name={icon as any} size={20} color={color} />
     </View>
-    <Text style={{ fontSize: 18, fontWeight: "700", color: COLORS.gray900 }}>
+    <Text style={{ fontSize: 18, fontWeight: "700", color: isDark ? "#F3F4F6" : "#111827" }}>
       {value}
     </Text>
-    <Text style={{ fontSize: 12, color: COLORS.gray500, marginTop: 2 }}>
+    <Text style={{ fontSize: 12, color: isDark ? "#9CA3AF" : "#6B7280", marginTop: 2 }}>
       {label}
     </Text>
   </View>
@@ -151,9 +158,9 @@ const StatBadge = ({
 
 export default function TeacherProfile() {
   const router = useRouter();
+  const { isDark, themeMode, setThemeMode } = useAppTheme();
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -232,11 +239,11 @@ export default function TeacherProfile() {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.white }}
+      style={{ flex: 1, backgroundColor: isDark ? "#111827" : "#FFFFFF" }}
       edges={["top"]}
     >
       <Animated.ScrollView
-        style={{ flex: 1, backgroundColor: COLORS.gray50 }}
+        style={{ flex: 1, backgroundColor: isDark ? "#1F2937" : "#F9FAFB" }}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: true }
@@ -335,7 +342,7 @@ export default function TeacherProfile() {
           style={{
             marginTop: -40,
             marginHorizontal: 20,
-            backgroundColor: COLORS.white,
+            backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
             borderRadius: 20,
             paddingVertical: 16,
             paddingHorizontal: 12,
@@ -347,21 +354,24 @@ export default function TeacherProfile() {
             icon="school"
             label="Students"
             value="245"
-            color={COLORS.primary}
+            color="#4E74F9"
+            isDark={isDark}
           />
-          <View style={{ width: 1, backgroundColor: COLORS.gray200 }} />
+          <View style={{ width: 1, backgroundColor: isDark ? "#374151" : "#E5E7EB" }} />
           <StatBadge
             icon="document-text"
             label="Exams"
             value="32"
-            color={COLORS.info}
+            color="#3B82F6"
+            isDark={isDark}
           />
-          <View style={{ width: 1, backgroundColor: COLORS.gray200 }} />
+          <View style={{ width: 1, backgroundColor: isDark ? "#374151" : "#E5E7EB" }} />
           <StatBadge
             icon="star"
             label="Rating"
             value="4.8"
-            color={COLORS.warning}
+            color="#F59E0B"
+            isDark={isDark}
           />
         </View>
 
@@ -371,7 +381,7 @@ export default function TeacherProfile() {
             style={{
               fontSize: 13,
               fontWeight: "600",
-              color: COLORS.gray500,
+              color: isDark ? "#9CA3AF" : "#6B7280",
               marginBottom: 12,
               marginLeft: 4,
             }}
@@ -380,7 +390,7 @@ export default function TeacherProfile() {
           </Text>
           <View
             style={{
-              backgroundColor: COLORS.white,
+              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
               borderRadius: 16,
               overflow: "hidden",
               ...SHADOWS.sm,
@@ -390,11 +400,12 @@ export default function TeacherProfile() {
               icon="briefcase-outline"
               label="Department"
               value="Science & Mathematics"
+              isDark={isDark}
             />
             <View
               style={{
                 height: 1,
-                backgroundColor: COLORS.gray100,
+                backgroundColor: isDark ? "#374151" : "#F3F4F6",
                 marginLeft: 70,
               }}
             />
@@ -402,15 +413,16 @@ export default function TeacherProfile() {
               icon="ribbon-outline"
               label="Experience"
               value="5 Years"
+              isDark={isDark}
             />
             <View
               style={{
                 height: 1,
-                backgroundColor: COLORS.gray100,
+                backgroundColor: isDark ? "#374151" : "#F3F4F6",
                 marginLeft: 70,
               }}
             />
-            <MenuItem icon="calendar-outline" label="Joined" value="Jan 2019" />
+            <MenuItem icon="calendar-outline" label="Joined" value="Jan 2019" isDark={isDark} />
           </View>
         </View>
 
@@ -420,7 +432,7 @@ export default function TeacherProfile() {
             style={{
               fontSize: 13,
               fontWeight: "600",
-              color: COLORS.gray500,
+              color: isDark ? "#9CA3AF" : "#6B7280",
               marginBottom: 12,
               marginLeft: 4,
             }}
@@ -429,7 +441,7 @@ export default function TeacherProfile() {
           </Text>
           <View
             style={{
-              backgroundColor: COLORS.white,
+              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
               borderRadius: 16,
               overflow: "hidden",
               ...SHADOWS.sm,
@@ -441,11 +453,12 @@ export default function TeacherProfile() {
               toggle
               toggleValue={notifications}
               onToggle={setNotifications}
+              isDark={isDark}
             />
             <View
               style={{
                 height: 1,
-                backgroundColor: COLORS.gray100,
+                backgroundColor: isDark ? "#374151" : "#F3F4F6",
                 marginLeft: 70,
               }}
             />
@@ -453,8 +466,9 @@ export default function TeacherProfile() {
               icon="moon-outline"
               label="Dark Mode"
               toggle
-              toggleValue={darkMode}
-              onToggle={setDarkMode}
+              toggleValue={themeMode === 'dark'}
+              onToggle={(value) => setThemeMode(value ? 'dark' : 'light')}
+              isDark={isDark}
             />
           </View>
         </View>
@@ -465,7 +479,7 @@ export default function TeacherProfile() {
             style={{
               fontSize: 13,
               fontWeight: "600",
-              color: COLORS.gray500,
+              color: isDark ? "#9CA3AF" : "#6B7280",
               marginBottom: 12,
               marginLeft: 4,
             }}
@@ -474,7 +488,7 @@ export default function TeacherProfile() {
           </Text>
           <View
             style={{
-              backgroundColor: COLORS.white,
+              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
               borderRadius: 16,
               overflow: "hidden",
               ...SHADOWS.sm,
@@ -484,11 +498,12 @@ export default function TeacherProfile() {
               icon="person-outline"
               label="Edit Profile"
               onPress={() => {}}
+              isDark={isDark}
             />
             <View
               style={{
                 height: 1,
-                backgroundColor: COLORS.gray100,
+                backgroundColor: isDark ? "#374151" : "#F3F4F6",
                 marginLeft: 70,
               }}
             />
@@ -496,11 +511,12 @@ export default function TeacherProfile() {
               icon="lock-closed-outline"
               label="Change Password"
               onPress={() => setShowPasswordModal(true)}
+              isDark={isDark}
             />
             <View
               style={{
                 height: 1,
-                backgroundColor: COLORS.gray100,
+                backgroundColor: isDark ? "#374151" : "#F3F4F6",
                 marginLeft: 70,
               }}
             />
@@ -508,6 +524,7 @@ export default function TeacherProfile() {
               icon="shield-checkmark-outline"
               label="Privacy Settings"
               onPress={() => {}}
+              isDark={isDark}
             />
           </View>
         </View>
@@ -518,7 +535,7 @@ export default function TeacherProfile() {
             style={{
               fontSize: 13,
               fontWeight: "600",
-              color: COLORS.gray500,
+              color: isDark ? "#9CA3AF" : "#6B7280",
               marginBottom: 12,
               marginLeft: 4,
             }}
@@ -527,7 +544,7 @@ export default function TeacherProfile() {
           </Text>
           <View
             style={{
-              backgroundColor: COLORS.white,
+              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
               borderRadius: 16,
               overflow: "hidden",
               ...SHADOWS.sm,
@@ -537,11 +554,12 @@ export default function TeacherProfile() {
               icon="help-circle-outline"
               label="Help Center"
               onPress={() => {}}
+              isDark={isDark}
             />
             <View
               style={{
                 height: 1,
-                backgroundColor: COLORS.gray100,
+                backgroundColor: isDark ? "#374151" : "#F3F4F6",
                 marginLeft: 70,
               }}
             />
@@ -549,11 +567,12 @@ export default function TeacherProfile() {
               icon="chatbubble-outline"
               label="Contact Us"
               onPress={() => {}}
+              isDark={isDark}
             />
             <View
               style={{
                 height: 1,
-                backgroundColor: COLORS.gray100,
+                backgroundColor: isDark ? "#374151" : "#F3F4F6",
                 marginLeft: 70,
               }}
             />
@@ -561,6 +580,7 @@ export default function TeacherProfile() {
               icon="document-text-outline"
               label="Terms & Conditions"
               onPress={() => {}}
+              isDark={isDark}
             />
           </View>
         </View>
@@ -571,7 +591,7 @@ export default function TeacherProfile() {
         >
           <View
             style={{
-              backgroundColor: COLORS.white,
+              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
               borderRadius: 16,
               overflow: "hidden",
               ...SHADOWS.sm,
@@ -582,6 +602,7 @@ export default function TeacherProfile() {
               label="Logout"
               danger
               onPress={handleLogout}
+              isDark={isDark}
             />
           </View>
 
@@ -589,7 +610,7 @@ export default function TeacherProfile() {
           <Text
             style={{
               textAlign: "center",
-              color: COLORS.gray400,
+              color: isDark ? "#6B7280" : "#9CA3AF",
               fontSize: 12,
               marginTop: 20,
             }}
@@ -610,7 +631,7 @@ export default function TeacherProfile() {
         >
           <View
             style={{
-              backgroundColor: COLORS.white,
+              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               padding: 24,
@@ -628,19 +649,19 @@ export default function TeacherProfile() {
                 style={{
                   fontSize: 20,
                   fontWeight: "700",
-                  color: COLORS.gray900,
+                  color: isDark ? "#F3F4F6" : "#111827",
                 }}
               >
                 Change Password
               </Text>
               <Pressable onPress={() => setShowPasswordModal(false)}>
-                <Ionicons name="close" size={24} color={COLORS.gray400} />
+                <Ionicons name="close" size={24} color={isDark ? "#6B7280" : "#9CA3AF"} />
               </Pressable>
             </View>
 
             <View style={{ marginBottom: 16 }}>
               <Text
-                style={{ fontSize: 14, color: COLORS.gray600, marginBottom: 8 }}
+                style={{ fontSize: 14, color: isDark ? "#9CA3AF" : "#4B5563", marginBottom: 8 }}
               >
                 Current Password
               </Text>
@@ -650,22 +671,24 @@ export default function TeacherProfile() {
                   setPasswordForm({ ...passwordForm, currentPassword: text })
                 }
                 placeholder="Enter current password"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
                 secureTextEntry
                 style={{
                   borderWidth: 1,
-                  borderColor: COLORS.gray200,
+                  borderColor: isDark ? "#374151" : "#E5E7EB",
                   borderRadius: 12,
                   paddingHorizontal: 16,
                   paddingVertical: 14,
                   fontSize: 16,
-                  color: COLORS.gray800,
+                  color: isDark ? "#F3F4F6" : "#1F2937",
+                  backgroundColor: isDark ? "#111827" : "#FFFFFF",
                 }}
               />
             </View>
 
             <View style={{ marginBottom: 16 }}>
               <Text
-                style={{ fontSize: 14, color: COLORS.gray600, marginBottom: 8 }}
+                style={{ fontSize: 14, color: isDark ? "#9CA3AF" : "#4B5563", marginBottom: 8 }}
               >
                 New Password
               </Text>
@@ -675,22 +698,24 @@ export default function TeacherProfile() {
                   setPasswordForm({ ...passwordForm, newPassword: text })
                 }
                 placeholder="Enter new password"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
                 secureTextEntry
                 style={{
                   borderWidth: 1,
-                  borderColor: COLORS.gray200,
+                  borderColor: isDark ? "#374151" : "#E5E7EB",
                   borderRadius: 12,
                   paddingHorizontal: 16,
                   paddingVertical: 14,
                   fontSize: 16,
-                  color: COLORS.gray800,
+                  color: isDark ? "#F3F4F6" : "#1F2937",
+                  backgroundColor: isDark ? "#111827" : "#FFFFFF",
                 }}
               />
             </View>
 
             <View style={{ marginBottom: 24 }}>
               <Text
-                style={{ fontSize: 14, color: COLORS.gray600, marginBottom: 8 }}
+                style={{ fontSize: 14, color: isDark ? "#9CA3AF" : "#4B5563", marginBottom: 8 }}
               >
                 Confirm New Password
               </Text>
@@ -700,15 +725,17 @@ export default function TeacherProfile() {
                   setPasswordForm({ ...passwordForm, confirmPassword: text })
                 }
                 placeholder="Confirm new password"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
                 secureTextEntry
                 style={{
                   borderWidth: 1,
-                  borderColor: COLORS.gray200,
+                  borderColor: isDark ? "#374151" : "#E5E7EB",
                   borderRadius: 12,
                   paddingHorizontal: 16,
                   paddingVertical: 14,
                   fontSize: 16,
-                  color: COLORS.gray800,
+                  color: isDark ? "#F3F4F6" : "#1F2937",
+                  backgroundColor: isDark ? "#111827" : "#FFFFFF",
                 }}
               />
             </View>
@@ -718,15 +745,15 @@ export default function TeacherProfile() {
               disabled={changingPassword}
               style={{
                 backgroundColor: changingPassword
-                  ? COLORS.gray400
-                  : COLORS.primary,
+                  ? "#9CA3AF"
+                  : "#4E74F9",
                 paddingVertical: 16,
                 borderRadius: 12,
                 alignItems: "center",
               }}
             >
               <Text
-                style={{ color: COLORS.white, fontSize: 16, fontWeight: "600" }}
+                style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600" }}
               >
                 {changingPassword ? "Changing..." : "Change Password"}
               </Text>

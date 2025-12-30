@@ -4,3 +4,4 @@
  */
 
 export { ToastProvider, useToast } from './ToastContext';
+export { ThemeProvider, useAppTheme } from './ThemeContext';

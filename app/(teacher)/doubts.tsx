@@ -1,22 +1,18 @@
 import { apiFetch } from "@/lib/api";
+import { useAppTheme } from "@/lib/context";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-
-const COLORS = {
-  primary: "#5ab348",
-  amber: "#f59e0b",
-};
 
 interface Doubt {
   _id: string;
@@ -35,6 +31,7 @@ interface Doubt {
 }
 
 export default function TeacherDoubts() {
+  const { isDark } = useAppTheme();
   const [doubts, setDoubts] = useState<Doubt[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,7 +43,9 @@ export default function TeacherDoubts() {
   const fetchDoubts = useCallback(async () => {
     try {
       const params = filter !== "all" ? `?status=${filter}` : "";
-      const res = await apiFetch(`/api/doubts/teacher${params}`) as { doubts: Doubt[] };
+      const res = (await apiFetch(`/api/doubts/teacher${params}`)) as {
+        doubts: Doubt[];
+      };
       setDoubts(res?.doubts || []);
     } catch (error) {
       console.error("Error fetching doubts:", error);
@@ -92,13 +91,25 @@ export default function TeacherDoubts() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return { bg: "bg-amber-100", text: "text-amber-700" };
+        return {
+          bg: isDark ? "bg-amber-900" : "bg-amber-100",
+          text: isDark ? "text-amber-300" : "text-amber-700",
+        };
       case "in-progress":
-        return { bg: "bg-blue-100", text: "text-blue-700" };
+        return {
+          bg: isDark ? "bg-blue-900" : "bg-blue-100",
+          text: isDark ? "text-blue-300" : "text-blue-700",
+        };
       case "resolved":
-        return { bg: "bg-green-100", text: "text-green-700" };
+        return {
+          bg: isDark ? "bg-green-900" : "bg-green-100",
+          text: isDark ? "text-green-300" : "text-green-700",
+        };
       default:
-        return { bg: "bg-gray-100", text: "text-gray-700" };
+        return {
+          bg: isDark ? "bg-gray-700" : "bg-gray-100",
+          text: isDark ? "text-gray-300" : "text-gray-700",
+        };
     }
   };
 
@@ -111,16 +122,16 @@ export default function TeacherDoubts() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color={COLORS.amber} />
+      <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900">
+        <ActivityIndicator size="large" color="#f59e0b" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <View className="pt-14 pb-6 px-6" style={{ backgroundColor: COLORS.amber }}>
+      <View className="pt-14 pb-6 px-6 bg-amber-500 dark:bg-amber-600">
         <Text className="text-white text-2xl font-bold">Doubts</Text>
         <Text className="text-white/80 text-sm">
           Help students with their questions
@@ -134,12 +145,14 @@ export default function TeacherDoubts() {
             key={f}
             onPress={() => setFilter(f)}
             className={`px-4 py-2 rounded-full ${
-              filter === f ? "bg-amber-500" : "bg-white border border-gray-200"
+              filter === f
+                ? "bg-amber-500"
+                : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
             }`}
           >
             <Text
               className={`font-semibold capitalize ${
-                filter === f ? "text-white" : "text-gray-600"
+                filter === f ? "text-white" : "text-gray-600 dark:text-gray-300"
               }`}
             >
               {f}
@@ -157,14 +170,20 @@ export default function TeacherDoubts() {
               setRefreshing(true);
               fetchDoubts();
             }}
-            colors={[COLORS.amber]}
+            colors={["#f59e0b"]}
           />
         }
       >
         {doubts.length === 0 ? (
           <View className="items-center py-12">
-            <Ionicons name="help-circle-outline" size={64} color="#d1d5db" />
-            <Text className="text-gray-500 text-lg mt-4">No doubts found</Text>
+            <Ionicons
+              name="help-circle-outline"
+              size={64}
+              color={isDark ? "#4b5563" : "#d1d5db"}
+            />
+            <Text className="text-gray-500 dark:text-gray-400 text-lg mt-4">
+              No doubts found
+            </Text>
           </View>
         ) : (
           doubts.map((doubt) => {
@@ -176,41 +195,50 @@ export default function TeacherDoubts() {
                   setSelectedDoubt(doubt);
                   setReply(doubt.reply || "");
                 }}
-                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4"
               >
                 <View className="flex-row items-start justify-between mb-3">
                   <View className="flex-row items-center">
-                    <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center mr-3">
-                      <Text className="text-amber-700 font-bold">
+                    <View className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 items-center justify-center mr-3">
+                      <Text className="text-amber-700 dark:text-amber-300 font-bold">
                         {doubt.student.name.charAt(0)}
                       </Text>
                     </View>
                     <View>
-                      <Text className="text-gray-900 font-semibold">
+                      <Text className="text-gray-900 dark:text-gray-100 font-semibold">
                         {doubt.student.name}
                       </Text>
-                      <Text className="text-gray-500 text-xs">
+                      <Text className="text-gray-500 dark:text-gray-400 text-xs">
                         {doubt.student.batch} • {formatDate(doubt.createdAt)}
                       </Text>
                     </View>
                   </View>
                   <View className={`px-2 py-1 rounded-full ${statusStyle.bg}`}>
-                    <Text className={`text-xs ${statusStyle.text}`}>{doubt.status}</Text>
+                    <Text className={`text-xs ${statusStyle.text}`}>
+                      {doubt.status}
+                    </Text>
                   </View>
                 </View>
 
                 <View className="flex-row flex-wrap gap-2 mb-2">
-                  <View className="bg-gray-100 px-2 py-1 rounded">
-                    <Text className="text-gray-600 text-xs">{doubt.subject}</Text>
+                  <View className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    <Text className="text-gray-600 dark:text-gray-300 text-xs">
+                      {doubt.subject}
+                    </Text>
                   </View>
                   {doubt.chapter && (
-                    <View className="bg-gray-100 px-2 py-1 rounded">
-                      <Text className="text-gray-600 text-xs">{doubt.chapter}</Text>
+                    <View className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                      <Text className="text-gray-600 dark:text-gray-300 text-xs">
+                        {doubt.chapter}
+                      </Text>
                     </View>
                   )}
                 </View>
 
-                <Text className="text-gray-700" numberOfLines={2}>
+                <Text
+                  className="text-gray-700 dark:text-gray-300"
+                  numberOfLines={2}
+                >
                   {doubt.question}
                 </Text>
               </Pressable>
@@ -223,39 +251,55 @@ export default function TeacherDoubts() {
       {/* Detail Modal */}
       <Modal visible={!!selectedDoubt} transparent animationType="slide">
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[80%]">
+          <View className="bg-white dark:bg-gray-800 rounded-t-3xl p-6 max-h-[80%]">
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-xl font-bold text-gray-900">Doubt Details</Text>
+              <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Doubt Details
+              </Text>
               <Pressable onPress={() => setSelectedDoubt(null)}>
-                <Ionicons name="close" size={24} color="#9ca3af" />
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={isDark ? "#9ca3af" : "#9ca3af"}
+                />
               </Pressable>
             </View>
 
             {selectedDoubt && (
               <ScrollView>
                 <View className="flex-row items-center mb-4">
-                  <View className="w-12 h-12 rounded-full bg-amber-100 items-center justify-center mr-3">
-                    <Text className="text-amber-700 font-bold text-lg">
+                  <View className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900 items-center justify-center mr-3">
+                    <Text className="text-amber-700 dark:text-amber-300 font-bold text-lg">
                       {selectedDoubt.student.name.charAt(0)}
                     </Text>
                   </View>
                   <View>
-                    <Text className="text-gray-900 font-semibold text-lg">
+                    <Text className="text-gray-900 dark:text-gray-100 font-semibold text-lg">
                       {selectedDoubt.student.name}
                     </Text>
-                    <Text className="text-gray-500">{selectedDoubt.student.email}</Text>
+                    <Text className="text-gray-500 dark:text-gray-400">
+                      {selectedDoubt.student.email}
+                    </Text>
                   </View>
                 </View>
 
-                <View className="bg-gray-50 rounded-xl p-4 mb-4">
-                  <Text className="text-gray-500 text-sm mb-1">Question</Text>
-                  <Text className="text-gray-800">{selectedDoubt.question}</Text>
+                <View className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 mb-4">
+                  <Text className="text-gray-500 dark:text-gray-400 text-sm mb-1">
+                    Question
+                  </Text>
+                  <Text className="text-gray-800 dark:text-gray-200">
+                    {selectedDoubt.question}
+                  </Text>
                 </View>
 
                 {selectedDoubt.reply && (
-                  <View className="bg-green-50 rounded-xl p-4 mb-4 border border-green-200">
-                    <Text className="text-green-700 text-sm mb-1">Your Reply</Text>
-                    <Text className="text-gray-800">{selectedDoubt.reply}</Text>
+                  <View className="bg-green-50 dark:bg-green-900 rounded-xl p-4 mb-4 border border-green-200 dark:border-green-700">
+                    <Text className="text-green-700 dark:text-green-300 text-sm mb-1">
+                      Your Reply
+                    </Text>
+                    <Text className="text-gray-800 dark:text-gray-200">
+                      {selectedDoubt.reply}
+                    </Text>
                   </View>
                 )}
 
@@ -263,28 +307,32 @@ export default function TeacherDoubts() {
                   <>
                     <TextInput
                       placeholder="Type your reply..."
+                      placeholderTextColor={isDark ? "#9ca3af" : "#9ca3af"}
                       value={reply}
                       onChangeText={setReply}
                       multiline
                       numberOfLines={4}
-                      className="border border-gray-200 rounded-xl px-4 py-3 mb-4 text-gray-800 h-24"
+                      className="border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 mb-4 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-900 h-24"
                       textAlignVertical="top"
                     />
 
                     <View className="flex-row gap-3">
                       <Pressable
                         onPress={() => handleResolve(selectedDoubt._id)}
-                        className="flex-1 py-3 rounded-xl bg-green-100 items-center"
+                        className="flex-1 py-3 rounded-xl bg-green-100 dark:bg-green-900 items-center"
                       >
-                        <Text className="text-green-700 font-semibold">Resolve</Text>
+                        <Text className="text-green-700 dark:text-green-300 font-semibold">
+                          Resolve
+                        </Text>
                       </Pressable>
                       <Pressable
                         onPress={handleReply}
                         disabled={!reply.trim() || sending}
-                        className="flex-1 py-3 rounded-xl items-center"
-                        style={{
-                          backgroundColor: reply.trim() ? COLORS.amber : "#d1d5db",
-                        }}
+                        className={`flex-1 py-3 rounded-xl items-center ${
+                          reply.trim()
+                            ? "bg-amber-500"
+                            : "bg-gray-300 dark:bg-gray-700"
+                        }`}
                       >
                         <Text className="text-white font-semibold">
                           {sending ? "Sending..." : "Send Reply"}

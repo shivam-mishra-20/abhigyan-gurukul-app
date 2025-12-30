@@ -1,36 +1,24 @@
-import { Ionicons } from "@expo/vector-icons";
+import { AnimatedTabBar } from "@/components/animated-tab-bar";
+import { useAppTheme } from "@/lib/context";
 import { Tabs } from "expo-router";
-
-// Rich green theme colors
-const THEME = {
-  primary: "#059669", // Emerald 600
-  inactive: "#9ca3af",
-};
+import { BookOpen, GraduationCap, Home, User } from "lucide-react-native";
 
 export default function StudentLayout() {
+  const { isDark } = useAppTheme();
+
   return (
     <Tabs
+      tabBar={(props) => (
+        <AnimatedTabBar
+          {...props}
+          activeTintColor={isDark ? "#6366F1" : "#059669"} // Indigo for dark, green for light
+          inactiveTintColor={isDark ? "#A1A1AA" : "#6B7280"}
+          backgroundColor={isDark ? "#27272A" : "#FFFFFF"}
+          isDark={isDark}
+        />
+      )}
       screenOptions={{
-        tabBarActiveTintColor: THEME.primary,
-        tabBarInactiveTintColor: THEME.inactive,
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#ffffff",
-          borderTopWidth: 1,
-          borderTopColor: "#e5e7eb",
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 65,
-          elevation: 8,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-        },
       }}
     >
       <Tabs.Screen
@@ -38,7 +26,7 @@ export default function StudentLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Home size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -47,7 +35,7 @@ export default function StudentLayout() {
         options={{
           title: "Courses",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" size={size} color={color} />
+            <BookOpen size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -56,7 +44,7 @@ export default function StudentLayout() {
         options={{
           title: "My Learning",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="school" size={size} color={color} />
+            <GraduationCap size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -65,7 +53,7 @@ export default function StudentLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <User size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -83,4 +71,3 @@ export default function StudentLayout() {
     </Tabs>
   );
 }
-

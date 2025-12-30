@@ -12,11 +12,8 @@ import {
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Constants
-import { COLORS } from "@/constants/colors";
-
 // Hooks
-import { useToast } from "@/lib/context";
+import { useAppTheme, useToast } from "@/lib/context";
 import { useDashboard } from "@/lib/hooks";
 
 // Components
@@ -73,7 +70,7 @@ const STAT_ITEMS: StatItem[] = [
   {
     id: "papers",
     key: "totalPapers",
-    title: "Question Papers",
+    title: "Questions",
     icon: "library",
     route: "/(teacher)/create-paper",
   },
@@ -110,6 +107,7 @@ const FEATURED_ACTIONS: FeaturedAction[] = [
 export default function TeacherHome() {
   const router = useRouter();
   const toast = useToast();
+  const { isDark } = useAppTheme();
 
   // Use our custom dashboard hook for data fetching
   const { stats, loading, refreshing, refetch, error } = useDashboard();
@@ -148,48 +146,44 @@ export default function TeacherHome() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+    <SafeAreaView
+      className="bg-white dark:bg-dark-background h-screen"
+      edges={["top"]}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
+            colors={["#8BC53F"]}
+            tintColor="#8BC53F"
           />
         }
       >
         {/* Header */}
-        <View
-          style={{
-            paddingHorizontal: 10,
-            paddingVertical: 20,
-            marginBottom: 10,
-            borderBottomWidth: 1,
-            borderBottomColor: COLORS.gray200,
-            backgroundColor: COLORS.white,
-          }}
-        >
+        <View className="px-2.5 py-5 mb-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface">
           <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <Text className="text-xs text-gray-600 mb-1">{getGreeting()}</Text>
-            <Text className="text-2xl font-semibold text-gray-900">
+            <Text className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+              {getGreeting()}
+            </Text>
+            <Text className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
               {stats?.teacherName || "Teacher"}
             </Text>
           </Animated.View>
 
           {/* Notification Icon */}
           <Pressable
-            onPress={() => navigateTo("/(teacher)/announcements")}
-            className="absolute top-8 right-4 w-11 h-11 rounded-full bg-gray-100 items-center justify-center"
+            onPress={() => navigateTo("/(teacher)/notifications")}
+            className="absolute top-8 right-4 w-11 h-11 rounded-full bg-gray-100 dark:bg-gray-700 items-center justify-center"
           >
             <Ionicons
               name="notifications-outline"
               size={24}
-              color={COLORS.gray700}
+              color={isDark ? "#F9FAFB" : "#374151"}
             />
             {stats?.pendingReviews ? (
-              <View className="absolute top-1.5 right-1.5 min-w-[16px] h-4 rounded-full bg-primary items-center justify-center px-1 border-2 border-white">
+              <View className="absolute top-1.5 right-1.5 min-w-[16px] h-4 rounded-full bg-primary-500 items-center justify-center px-1 border-2 border-white dark:border-dark-surface">
                 <Text className="text-[9px] font-bold text-white">
                   {stats.pendingReviews}
                 </Text>
@@ -203,7 +197,7 @@ export default function TeacherHome() {
           entering={FadeInDown.delay(200).springify()}
           className="px-4 mb-6"
         >
-          <Text className="text-base font-semibold text-gray-900 mb-3">
+          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
             Overview
           </Text>
           <View className="flex-row flex-wrap gap-2">
@@ -217,22 +211,21 @@ export default function TeacherHome() {
               >
                 <Pressable
                   onPress={() => navigateTo(item.route)}
-                  className="bg-white rounded-2xl p-4 min-h-[110px] border border-gray-200 active:bg-gray-50"
+                  className="bg-white dark:bg-dark-card rounded-2xl p-4 min-h-[110px] border border-gray-200 dark:border-gray-700"
                 >
-                  <View
-                    className="w-10 h-10 rounded-xl items-center justify-center mb-3"
-                    style={{ backgroundColor: `${COLORS.primary}15` }}
-                  >
+                  <View className="w-10 h-10 rounded-xl items-center justify-center mb-3 bg-primary-100 dark:bg-primary-900/30">
                     <Ionicons
                       name={item.icon}
                       size={20}
-                      color={COLORS.primary}
+                      color={isDark ? "#A3CF47" : "#6EA530"}
                     />
                   </View>
-                  <Text className="text-2xl font-bold text-gray-900 mb-0.5">
+                  <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5">
                     {loading ? "..." : stats?.[item.key] ?? 0}
                   </Text>
-                  <Text className="text-xs text-gray-600">{item.title}</Text>
+                  <Text className="text-xs text-gray-600 dark:text-gray-400">
+                    {item.title}
+                  </Text>
                 </Pressable>
               </Animated.View>
             ))}
@@ -244,11 +237,11 @@ export default function TeacherHome() {
           entering={FadeInDown.delay(400).springify()}
           className="px-4"
         >
-          <Text className="text-base font-semibold text-gray-900 mb-3">
+          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
             Quick Actions
           </Text>
 
-          <View className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <View className="bg-white dark:bg-dark-card rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             {FEATURED_ACTIONS.map((action, index) => (
               <Animated.View
                 key={action.id}
@@ -256,43 +249,37 @@ export default function TeacherHome() {
               >
                 <Pressable
                   onPress={() => navigateTo(action.route)}
-                  className={`flex-row items-center p-4 active:bg-gray-50 ${
+                  className={`flex-row items-center p-4 ${
                     index < FEATURED_ACTIONS.length - 1
-                      ? "border-b border-gray-100"
+                      ? "border-b border-gray-100 dark:border-gray-700"
                       : ""
                   }`}
                 >
-                  <View
-                    className="w-11 h-11 rounded-xl items-center justify-center mr-3"
-                    style={{ backgroundColor: `${COLORS.primary}15` }}
-                  >
+                  <View className="w-11 h-11 rounded-xl items-center justify-center mr-3 bg-primary-100 dark:bg-primary-900/30">
                     <Ionicons
                       name={action.icon}
                       size={22}
-                      color={COLORS.primary}
+                      color={isDark ? "#A3CF47" : "#6EA530"}
                     />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-base font-medium text-gray-900 mb-0.5">
+                    <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-0.5">
                       {action.title}
                     </Text>
-                    <Text className="text-xs text-gray-600">
+                    <Text className="text-xs text-gray-600 dark:text-gray-400">
                       {action.subtitle}
                     </Text>
                   </View>
                   <Ionicons
                     name="chevron-forward"
                     size={18}
-                    color={COLORS.gray400}
+                    color={isDark ? "#9CA3AF" : "#6B7280"}
                   />
                 </Pressable>
               </Animated.View>
             ))}
           </View>
         </Animated.View>
-
-        {/* Bottom spacing */}
-        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );

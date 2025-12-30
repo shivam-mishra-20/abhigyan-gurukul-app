@@ -1,8 +1,23 @@
-import { COLORS, GRADIENTS, SHADOWS } from "@/constants/colors";
+import { GRADIENTS, SHADOWS, getColors } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
-import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "@/lib/context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import {
+  ArrowLeft,
+  BookOpen,
+  CheckCircle,
+  Clock,
+  Eye,
+  FileClock,
+  FileText,
+  HelpCircle,
+  Plus,
+  School,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -59,7 +74,23 @@ const StatCard = ({
   color: string;
   gradient?: [string, string];
 }) => {
+  const { isDark } = useAppTheme();
+  const colors = getColors(isDark);
   const scale = useRef(new Animated.Value(1)).current;
+
+  const getIcon = () => {
+    const iconProps = { size: 18, color, strokeWidth: 2 };
+    switch (icon) {
+      case "documents":
+        return <FileText {...iconProps} />;
+      case "checkmark-circle":
+        return <CheckCircle {...iconProps} />;
+      case "time":
+        return <FileClock {...iconProps} />;
+      default:
+        return <FileText {...iconProps} />;
+    }
+  };
 
   return (
     <Animated.View style={{ flex: 1, transform: [{ scale }] }}>
@@ -83,14 +114,18 @@ const StatCard = ({
             marginBottom: 8,
           }}
         >
-          <Ionicons name={icon as any} size={18} color={color} />
+          {getIcon()}
         </View>
         <Text
-          style={{ fontSize: 24, fontWeight: "700", color: COLORS.gray900 }}
+          style={{
+            fontSize: 24,
+            fontWeight: "700",
+            color: isDark ? colors.gray100 : colors.gray900,
+          }}
         >
           {value}
         </Text>
-        <Text style={{ fontSize: 12, color: COLORS.gray500, marginTop: 2 }}>
+        <Text style={{ fontSize: 12, color: colors.gray500, marginTop: 2 }}>
           {label}
         </Text>
       </LinearGradient>
@@ -114,6 +149,8 @@ const ExamCard = ({
   onEdit: () => void;
   onBuild: () => void;
 }) => {
+  const { isDark } = useAppTheme();
+  const colors = getColors(isDark);
   const scale = useRef(new Animated.Value(1)).current;
   const questionsCount =
     exam.sections?.reduce((sum, s) => sum + s.questionIds.length, 0) || 0;
@@ -135,11 +172,11 @@ const ExamCard = ({
       >
         <View
           style={{
-            backgroundColor: COLORS.white,
+            backgroundColor: colors.white,
             borderRadius: 20,
             padding: 16,
             borderWidth: 1,
-            borderColor: COLORS.gray200,
+            borderColor: colors.gray200,
             ...SHADOWS.sm,
           }}
         >
@@ -157,17 +194,17 @@ const ExamCard = ({
                 height: 48,
                 borderRadius: 14,
                 backgroundColor: exam.isPublished
-                  ? COLORS.primaryBg
-                  : COLORS.gray100,
+                  ? colors.primaryBg
+                  : colors.gray100,
                 alignItems: "center",
                 justifyContent: "center",
                 marginRight: 12,
               }}
             >
-              <Ionicons
-                name="document-text"
+              <FileText
                 size={24}
-                color={exam.isPublished ? COLORS.primary : COLORS.gray400}
+                color={exam.isPublished ? colors.primary : colors.gray400}
+                strokeWidth={2}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -175,7 +212,7 @@ const ExamCard = ({
                 style={{
                   fontSize: 16,
                   fontWeight: "700",
-                  color: COLORS.gray900,
+                  color: colors.gray900,
                 }}
                 numberOfLines={2}
               >
@@ -191,15 +228,15 @@ const ExamCard = ({
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Ionicons
-                    name="help-circle-outline"
+                  <HelpCircle
                     size={14}
-                    color={COLORS.gray500}
+                    color={colors.gray500}
+                    strokeWidth={2}
                   />
                   <Text
                     style={{
                       fontSize: 12,
-                      color: COLORS.gray500,
+                      color: colors.gray500,
                       marginLeft: 4,
                     }}
                   >
@@ -207,15 +244,11 @@ const ExamCard = ({
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Ionicons
-                    name="time-outline"
-                    size={14}
-                    color={COLORS.gray500}
-                  />
+                  <Clock size={14} color={colors.gray500} strokeWidth={2} />
                   <Text
                     style={{
                       fontSize: 12,
-                      color: COLORS.gray500,
+                      color: colors.gray500,
                       marginLeft: 4,
                     }}
                   >
@@ -230,15 +263,15 @@ const ExamCard = ({
                 paddingVertical: 5,
                 borderRadius: 20,
                 backgroundColor: exam.isPublished
-                  ? COLORS.primaryBg
-                  : COLORS.warningLight,
+                  ? colors.primaryBg
+                  : colors.warningLight,
               }}
             >
               <Text
                 style={{
                   fontSize: 11,
                   fontWeight: "600",
-                  color: exam.isPublished ? COLORS.primary : COLORS.warning,
+                  color: exam.isPublished ? colors.primary : colors.warning,
                 }}
               >
                 {exam.isPublished ? "Published" : "Draft"}
@@ -252,19 +285,15 @@ const ExamCard = ({
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: COLORS.gray50,
+                backgroundColor: colors.gray50,
                 borderRadius: 10,
                 padding: 10,
                 marginBottom: 12,
               }}
             >
-              <Ionicons
-                name="school-outline"
-                size={16}
-                color={COLORS.gray600}
-              />
+              <School size={16} color={colors.gray600} strokeWidth={2} />
               <Text
-                style={{ fontSize: 13, color: COLORS.gray600, marginLeft: 8 }}
+                style={{ fontSize: 13, color: colors.gray600, marginLeft: 8 }}
               >
                 Class {exam.classLevel}
               </Text>
@@ -275,19 +304,15 @@ const ExamCard = ({
                       width: 4,
                       height: 4,
                       borderRadius: 2,
-                      backgroundColor: COLORS.gray400,
+                      backgroundColor: colors.gray400,
                       marginHorizontal: 8,
                     }}
                   />
-                  <Ionicons
-                    name="people-outline"
-                    size={16}
-                    color={COLORS.gray600}
-                  />
+                  <Users size={16} color={colors.gray600} strokeWidth={2} />
                   <Text
                     style={{
                       fontSize: 13,
-                      color: COLORS.gray600,
+                      color: colors.gray600,
                       marginLeft: 8,
                     }}
                   >
@@ -324,7 +349,7 @@ const ExamCard = ({
                   bottom: 0,
                 }}
               />
-              <Ionicons name="construct-outline" size={16} color="white" />
+              <BookOpen size={16} color="white" strokeWidth={2} />
               <Text
                 style={{
                   fontSize: 14,
@@ -348,19 +373,15 @@ const ExamCard = ({
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1.5,
-                borderColor: COLORS.gray200,
+                borderColor: colors.gray200,
               }}
             >
-              <Ionicons
-                name="people-outline"
-                size={16}
-                color={COLORS.gray600}
-              />
+              <Users size={16} color={colors.gray600} strokeWidth={2} />
               <Text
                 style={{
                   fontSize: 13,
                   fontWeight: "600",
-                  color: COLORS.gray600,
+                  color: colors.gray600,
                   marginLeft: 6,
                 }}
               >
@@ -377,20 +398,20 @@ const ExamCard = ({
                 paddingVertical: 10,
                 borderRadius: 10,
                 backgroundColor: exam.isPublished
-                  ? COLORS.warningLight
-                  : COLORS.primaryBg,
+                  ? colors.warningLight
+                  : colors.primaryBg,
               }}
             >
-              <Ionicons
-                name={exam.isPublished ? "eye-off-outline" : "eye-outline"}
+              <Eye
                 size={16}
-                color={exam.isPublished ? COLORS.warning : COLORS.primary}
+                color={exam.isPublished ? colors.warning : colors.primary}
+                strokeWidth={2}
               />
               <Text
                 style={{
                   fontSize: 13,
                   fontWeight: "600",
-                  color: exam.isPublished ? COLORS.warning : COLORS.primary,
+                  color: exam.isPublished ? colors.warning : colors.primary,
                   marginLeft: 6,
                 }}
               >
@@ -405,10 +426,10 @@ const ExamCard = ({
                 justifyContent: "center",
                 paddingVertical: 10,
                 borderRadius: 10,
-                backgroundColor: COLORS.errorLight,
+                backgroundColor: colors.errorLight,
               }}
             >
-              <Ionicons name="trash-outline" size={18} color={COLORS.error} />
+              <Trash2 size={18} color={colors.error} strokeWidth={2} />
             </Pressable>
           </View>
         </View>
@@ -426,32 +447,39 @@ const SelectionChip = ({
   label: string;
   selected: boolean;
   onPress: () => void;
-}) => (
-  <Pressable onPress={onPress}>
-    <LinearGradient
-      colors={selected ? GRADIENTS.primary : [COLORS.gray100, COLORS.gray100]}
-      style={{
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
-        marginRight: 8,
-      }}
-    >
-      <Text
+}) => {
+  const { isDark } = useAppTheme();
+  const colors = getColors(isDark);
+
+  return (
+    <Pressable onPress={onPress}>
+      <LinearGradient
+        colors={selected ? GRADIENTS.primary : [colors.gray100, colors.gray100]}
         style={{
-          fontSize: 14,
-          fontWeight: "600",
-          color: selected ? COLORS.white : COLORS.gray600,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          borderRadius: 12,
+          marginRight: 8,
         }}
       >
-        {label}
-      </Text>
-    </LinearGradient>
-  </Pressable>
-);
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: "600",
+            color: selected ? "#FFFFFF" : colors.gray600,
+          }}
+        >
+          {label}
+        </Text>
+      </LinearGradient>
+    </Pressable>
+  );
+};
 
 export default function TeacherExams() {
   const router = useRouter();
+  const { isDark } = useAppTheme();
+  const colors = getColors(isDark);
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -594,28 +622,32 @@ export default function TeacherExams() {
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: COLORS.white,
+          backgroundColor: colors.white,
         }}
       >
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.white }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       edges={["top"]}
     >
       {/* Header */}
-      <View
+      <LinearGradient
+        colors={
+          isDark
+            ? ["#6366F1", "#4F46E5"]
+            : (["#059669", "#047857"] as [string, string])
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={{
-          paddingHorizontal: 10,
-          paddingVertical: 20,
-          marginBottom: 10,
-          borderBottomWidth: 1,
-          borderBottomColor: COLORS.gray200,
-          backgroundColor: COLORS.white,
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: 20,
         }}
       >
         <View
@@ -625,7 +657,7 @@ export default function TeacherExams() {
             justifyContent: "space-between",
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
             <Pressable
               onPress={() => router.back()}
               style={{
@@ -638,13 +670,13 @@ export default function TeacherExams() {
                 marginRight: 16,
               }}
             >
-              <Ionicons name="arrow-back" size={22} color="black" />
+              <ArrowLeft size={22} color="white" strokeWidth={2.5} />
             </Pressable>
-            <View>
-              <Text style={{ color: "black", fontSize: 24, fontWeight: "700" }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "white", fontSize: 24, fontWeight: "700" }}>
                 Exams
               </Text>
-              <Text style={{ color: "rgba(0,0,0,0.8)", fontSize: 13 }}>
+              <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 13 }}>
                 Manage your question papers
               </Text>
             </View>
@@ -654,17 +686,21 @@ export default function TeacherExams() {
             style={{
               width: 48,
               height: 48,
-              borderRadius: 22,
-              backgroundColor: "white",
+              borderRadius: 24,
+              backgroundColor: "rgba(255,255,255,0.95)",
               alignItems: "center",
               justifyContent: "center",
               ...SHADOWS.md,
             }}
           >
-            <Ionicons name="add" size={26} color={COLORS.primary} />
+            <Plus
+              size={26}
+              color={isDark ? "#6366F1" : "#059669"}
+              strokeWidth={2.5}
+            />
           </Pressable>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Stats */}
       <View
@@ -679,19 +715,19 @@ export default function TeacherExams() {
           icon="documents"
           label="Total"
           value={exams.length}
-          color={COLORS.info}
+          color={colors.info}
         />
         <StatCard
           icon="checkmark-circle"
           label="Published"
           value={exams.filter((e) => e.isPublished).length}
-          color={COLORS.primary}
+          color={colors.primary}
         />
         <StatCard
           icon="create"
           label="Draft"
           value={exams.filter((e) => !e.isPublished).length}
-          color={COLORS.warning}
+          color={colors.warning}
         />
       </View>
 
@@ -727,7 +763,7 @@ export default function TeacherExams() {
               setRefreshing(true);
               fetchExams();
             }}
-            colors={[COLORS.primary]}
+            colors={[colors.primary]}
           />
         }
       >
@@ -738,23 +774,19 @@ export default function TeacherExams() {
                 width: 80,
                 height: 80,
                 borderRadius: 40,
-                backgroundColor: COLORS.gray100,
+                backgroundColor: colors.gray100,
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 16,
               }}
             >
-              <Ionicons
-                name="document-text-outline"
-                size={40}
-                color={COLORS.gray400}
-              />
+              <FileText size={40} color={colors.gray400} strokeWidth={1.5} />
             </View>
             <Text
               style={{
                 fontSize: 18,
                 fontWeight: "600",
-                color: COLORS.gray700,
+                color: colors.gray700,
                 marginBottom: 8,
               }}
             >
@@ -763,7 +795,7 @@ export default function TeacherExams() {
             <Text
               style={{
                 fontSize: 14,
-                color: COLORS.gray500,
+                color: colors.gray500,
                 textAlign: "center",
                 marginBottom: 20,
               }}
@@ -819,7 +851,7 @@ export default function TeacherExams() {
         >
           <View
             style={{
-              backgroundColor: COLORS.white,
+              backgroundColor: colors.white,
               borderTopLeftRadius: 28,
               borderTopRightRadius: 28,
               padding: 24,
@@ -838,13 +870,13 @@ export default function TeacherExams() {
                   style={{
                     fontSize: 22,
                     fontWeight: "700",
-                    color: COLORS.gray900,
+                    color: colors.gray900,
                   }}
                 >
                   Create Exam
                 </Text>
                 <Text
-                  style={{ fontSize: 14, color: COLORS.gray500, marginTop: 2 }}
+                  style={{ fontSize: 14, color: colors.gray500, marginTop: 2 }}
                 >
                   Add a new question paper
                 </Text>
@@ -855,12 +887,12 @@ export default function TeacherExams() {
                   width: 36,
                   height: 36,
                   borderRadius: 18,
-                  backgroundColor: COLORS.gray100,
+                  backgroundColor: colors.gray100,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="close" size={20} color={COLORS.gray600} />
+                <X size={20} color={colors.gray600} strokeWidth={2} />
               </Pressable>
             </View>
 
@@ -868,7 +900,7 @@ export default function TeacherExams() {
               style={{
                 fontSize: 14,
                 fontWeight: "600",
-                color: COLORS.gray700,
+                color: colors.gray700,
                 marginBottom: 8,
               }}
             >
@@ -878,16 +910,16 @@ export default function TeacherExams() {
               placeholder="e.g., Mid-Term Physics Test"
               value={title}
               onChangeText={setTitle}
-              placeholderTextColor={COLORS.gray400}
+              placeholderTextColor={colors.gray400}
               style={{
                 borderWidth: 2,
-                borderColor: title ? COLORS.primary : COLORS.gray200,
+                borderColor: title ? colors.primary : colors.gray200,
                 borderRadius: 14,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
                 fontSize: 16,
                 marginBottom: 24,
-                color: COLORS.gray800,
+                color: colors.gray800,
               }}
             />
 
@@ -899,7 +931,7 @@ export default function TeacherExams() {
               <LinearGradient
                 colors={
                   creating || !title.trim()
-                    ? [COLORS.gray300, COLORS.gray300]
+                    ? [colors.gray300, colors.gray300]
                     : GRADIENTS.primary
                 }
                 style={{ paddingVertical: 16, alignItems: "center" }}
@@ -926,7 +958,7 @@ export default function TeacherExams() {
         >
           <View
             style={{
-              backgroundColor: COLORS.white,
+              backgroundColor: colors.white,
               borderTopLeftRadius: 28,
               borderTopRightRadius: 28,
               padding: 24,
@@ -945,13 +977,13 @@ export default function TeacherExams() {
                   style={{
                     fontSize: 22,
                     fontWeight: "700",
-                    color: COLORS.gray900,
+                    color: colors.gray900,
                   }}
                 >
                   Assign Exam
                 </Text>
                 <Text
-                  style={{ fontSize: 14, color: COLORS.gray500, marginTop: 2 }}
+                  style={{ fontSize: 14, color: colors.gray500, marginTop: 2 }}
                   numberOfLines={1}
                 >
                   {selectedExam?.title}
@@ -963,12 +995,12 @@ export default function TeacherExams() {
                   width: 36,
                   height: 36,
                   borderRadius: 18,
-                  backgroundColor: COLORS.gray100,
+                  backgroundColor: colors.gray100,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="close" size={20} color={COLORS.gray600} />
+                <X size={20} color={colors.gray600} strokeWidth={2} />
               </Pressable>
             </View>
 
@@ -976,7 +1008,7 @@ export default function TeacherExams() {
               style={{
                 fontSize: 14,
                 fontWeight: "600",
-                color: COLORS.gray700,
+                color: colors.gray700,
                 marginBottom: 10,
               }}
             >
@@ -1001,7 +1033,7 @@ export default function TeacherExams() {
               style={{
                 fontSize: 14,
                 fontWeight: "600",
-                color: COLORS.gray700,
+                color: colors.gray700,
                 marginBottom: 10,
               }}
             >
@@ -1030,7 +1062,7 @@ export default function TeacherExams() {
               <LinearGradient
                 colors={
                   !classLevel || !batch
-                    ? [COLORS.gray300, COLORS.gray300]
+                    ? [colors.gray300, colors.gray300]
                     : GRADIENTS.primary
                 }
                 style={{ paddingVertical: 16, alignItems: "center" }}

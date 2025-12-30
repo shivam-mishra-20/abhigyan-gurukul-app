@@ -1,15 +1,24 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import {
+  BarChart3,
+  Bell,
+  CheckCircle2,
+  ChevronRight,
+  FolderOpen,
+  HelpCircle,
+  LogOut,
+  Megaphone,
+  Settings,
+  User,
+  Users,
+} from "lucide-react-native";
 import React from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Constants
-import { COLORS } from "@/constants/colors";
-
 // Hooks
-import { useToast } from "@/lib/context";
+import { useAppTheme, useToast } from "@/lib/context";
 import { useAuth } from "@/lib/hooks";
 
 // ============================================================================
@@ -20,13 +29,13 @@ interface MenuItem {
   id: string;
   title: string;
   subtitle: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
   route: string;
 }
 
 interface MenuCategory {
   title: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
   items: MenuItem[];
 }
 
@@ -43,7 +52,7 @@ const MENU_CATEGORIES: MenuCategory[] = [
         id: "students",
         title: "Students",
         subtitle: "View & manage students",
-        icon: "people",
+        icon: "users",
         route: "/(teacher)/students",
       },
       {
@@ -57,15 +66,29 @@ const MENU_CATEGORIES: MenuCategory[] = [
         id: "performance",
         title: "Performance",
         subtitle: "Track progress & stats",
-        icon: "bar-chart",
+        icon: "chart",
         route: "/(teacher)/performance",
+      },
+      {
+        id: "reviews",
+        title: "Reviews",
+        subtitle: "Test Reviews to grade",
+        icon: "check",
+        route: "/(teacher)/reviews",
       },
     ],
   },
   {
     title: "Communication",
-    icon: "chatbubbles",
+    icon: "bell",
     items: [
+      {
+        id: "notifications",
+        title: "Notifications",
+        subtitle: "View all notifications",
+        icon: "bell",
+        route: "/(teacher)/notifications",
+      },
       {
         id: "announcements",
         title: "Announcements",
@@ -77,7 +100,7 @@ const MENU_CATEGORIES: MenuCategory[] = [
         id: "doubts",
         title: "Student Doubts",
         subtitle: "Answer questions",
-        icon: "help-circle",
+        icon: "help",
         route: "/(teacher)/doubts",
       },
     ],
@@ -90,14 +113,14 @@ const MENU_CATEGORIES: MenuCategory[] = [
         id: "profile",
         title: "My Profile",
         subtitle: "View & edit profile",
-        icon: "person",
+        icon: "user",
         route: "/(teacher)/profile",
       },
       {
         id: "settings",
         title: "Settings",
         subtitle: "Preferences & notifications",
-        icon: "cog",
+        icon: "settings",
         route: "/(teacher)/settings",
       },
     ],
@@ -111,27 +134,65 @@ const MENU_CATEGORIES: MenuCategory[] = [
 interface MenuItemCardProps {
   item: MenuItem;
   onPress: () => void;
+  isDark: boolean;
 }
 
-function MenuItemCard({ item, onPress }: MenuItemCardProps) {
+function MenuItemCard({ item, onPress, isDark }: MenuItemCardProps) {
+  const iconColor = isDark ? "#6366F1" : "#059669"; // Indigo for dark, green for light
+  const iconBg = isDark
+    ? "rgba(99, 102, 241, 0.15)"
+    : "rgba(5, 150, 105, 0.15)";
+
+  const getIcon = (iconName: string) => {
+    const iconProps = { size: 20, color: iconColor, strokeWidth: 2 };
+    switch (iconName) {
+      case "users":
+        return <Users {...iconProps} />;
+      case "folder":
+        return <FolderOpen {...iconProps} />;
+      case "chart":
+        return <BarChart3 {...iconProps} />;
+      case "check":
+        return <CheckCircle2 {...iconProps} />;
+      case "bell":
+        return <Bell {...iconProps} />;
+      case "megaphone":
+        return <Megaphone {...iconProps} />;
+      case "help":
+        return <HelpCircle {...iconProps} />;
+      case "user":
+        return <User {...iconProps} />;
+      case "settings":
+        return <Settings {...iconProps} />;
+      default:
+        return <User {...iconProps} />;
+    }
+  };
+
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center p-3 border-b border-gray-100 active:bg-gray-50"
+      className="flex-row items-center p-3 border-b border-gray-100 dark:border-gray-700"
     >
       <View
         className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-        style={{ backgroundColor: `${COLORS.primary}15` }}
+        style={{ backgroundColor: iconBg }}
       >
-        <Ionicons name={item.icon} size={20} color={COLORS.primary} />
+        {getIcon(item.icon)}
       </View>
       <View className="flex-1">
-        <Text className="text-base font-medium text-gray-900 mb-0.5">
+        <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-0.5">
           {item.title}
         </Text>
-        <Text className="text-xs text-gray-600">{item.subtitle}</Text>
+        <Text className="text-xs text-gray-600 dark:text-gray-400">
+          {item.subtitle}
+        </Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={COLORS.gray400} />
+      <ChevronRight
+        size={18}
+        color={isDark ? "#71717A" : "#9CA3AF"}
+        strokeWidth={2}
+      />
     </Pressable>
   );
 }
@@ -144,6 +205,7 @@ export default function MoreScreen() {
   const router = useRouter();
   const { logout, user } = useAuth();
   const toast = useToast();
+  const { isDark } = useAppTheme();
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -169,7 +231,10 @@ export default function MoreScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-gray-50 dark:bg-dark-background"
+      edges={["top"]}
+    >
       <ScrollView
         className="flex-1"
         contentContainerClassName="px-4 pb-6"
@@ -177,31 +242,39 @@ export default function MoreScreen() {
       >
         {/* Profile Card */}
         <Animated.View entering={FadeInDown.delay(100).springify()}>
-          <View className="bg-white rounded-2xl border border-gray-200 mb-6 mt-4">
+          <View className="bg-white dark:bg-dark-card rounded-2xl border border-gray-200 dark:border-gray-700 mb-6 mt-4">
             <Pressable
               onPress={() => navigateTo("/(teacher)/profile")}
-              className="flex-row items-center p-4 active:bg-gray-50"
+              className="flex-row items-center p-4"
             >
               <View className="mr-3">
                 <View
                   className="w-14 h-14 rounded-full items-center justify-center"
-                  style={{ backgroundColor: `${COLORS.primary}15` }}
+                  style={{
+                    backgroundColor: isDark
+                      ? "rgba(99, 102, 241, 0.15)"
+                      : "rgba(5, 150, 105, 0.15)",
+                  }}
                 >
-                  <Ionicons name="person" size={28} color={COLORS.primary} />
+                  <User
+                    size={28}
+                    color={isDark ? "#6366F1" : "#059669"}
+                    strokeWidth={2}
+                  />
                 </View>
               </View>
               <View className="flex-1">
-                <Text className="text-base font-semibold text-gray-900 mb-0.5">
+                <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-0.5">
                   {user?.name || "Teacher"}
                 </Text>
-                <Text className="text-xs text-gray-600">
+                <Text className="text-xs text-gray-600 dark:text-gray-400">
                   {user?.email || "teacher@example.com"}
                 </Text>
               </View>
-              <Ionicons
-                name="chevron-forward"
+              <ChevronRight
                 size={20}
-                color={COLORS.gray400}
+                color={isDark ? "#71717A" : "#9CA3AF"}
+                strokeWidth={2}
               />
             </Pressable>
           </View>
@@ -215,12 +288,12 @@ export default function MoreScreen() {
             className="mb-6"
           >
             {/* Category Header */}
-            <Text className="text-base font-semibold text-gray-900 mb-2">
+            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
               {category.title}
             </Text>
 
             {/* Category Items */}
-            <View className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <View className="bg-white dark:bg-dark-card rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               {category.items.map((item, itemIndex) => (
                 <Animated.View
                   key={item.id}
@@ -231,6 +304,7 @@ export default function MoreScreen() {
                   <MenuItemCard
                     item={item}
                     onPress={() => navigateTo(item.route)}
+                    isDark={isDark}
                   />
                 </Animated.View>
               ))}
@@ -242,23 +316,28 @@ export default function MoreScreen() {
         <Animated.View entering={FadeInDown.delay(600).springify()}>
           <Pressable
             onPress={handleLogout}
-            className="flex-row items-center bg-white rounded-2xl p-3 border border-gray-200 active:bg-gray-50"
+            className="flex-row items-center bg-white dark:bg-dark-card rounded-2xl p-3 border border-gray-200 dark:border-gray-700"
           >
-            <View
-              className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-              style={{ backgroundColor: `${COLORS.error}15` }}
-            >
-              <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
+            <View className="w-10 h-10 rounded-xl items-center justify-center mr-3 bg-red-100 dark:bg-red-900/30">
+              <LogOut
+                size={20}
+                color={isDark ? "#FCA5A5" : "#DC2626"}
+                strokeWidth={2}
+              />
             </View>
-            <Text className="flex-1 text-base font-medium text-red-500">
+            <Text className="flex-1 text-base font-medium text-red-500 dark:text-red-400">
               Logout
             </Text>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.error} />
+            <ChevronRight
+              size={18}
+              color={isDark ? "#FCA5A5" : "#DC2626"}
+              strokeWidth={2}
+            />
           </Pressable>
         </Animated.View>
 
         {/* App Version */}
-        <Text className="text-xs text-gray-400 text-center mt-6">
+        <Text className="text-xs text-gray-400 dark:text-gray-500 text-center mt-6">
           Abhigyan Gurukul v1.0.0
         </Text>
       </ScrollView>

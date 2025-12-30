@@ -1,10 +1,20 @@
 import { MathText } from "@/components/ui/MathText";
-import { COLORS, GRADIENTS, SHADOWS } from "@/constants/colors";
+import { getColors, GRADIENTS, SHADOWS } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
-import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "@/lib/context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bookmark,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+} from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -146,11 +156,13 @@ const AnimatedChip = ({
   label,
   onPress,
   small = false,
+  colors,
 }: {
   selected: boolean;
   label: string;
   onPress: () => void;
   small?: boolean;
+  colors: ReturnType<typeof getColors>;
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -175,7 +187,7 @@ const AnimatedChip = ({
       <Pressable onPress={handlePress}>
         <LinearGradient
           colors={
-            selected ? GRADIENTS.primary : [COLORS.gray100, COLORS.gray100]
+            selected ? GRADIENTS.primary : [colors.gray100, colors.gray100]
           }
           style={{
             paddingHorizontal: small ? 12 : 16,
@@ -188,7 +200,7 @@ const AnimatedChip = ({
         >
           <Text
             style={{
-              color: selected ? COLORS.white : COLORS.gray700,
+              color: selected ? colors.white : colors.gray700,
               fontWeight: selected ? "600" : "500",
               fontSize: small ? 13 : 14,
             }}
@@ -206,10 +218,12 @@ const BoardCard = ({
   board,
   selected,
   onPress,
+  colors,
 }: {
   board: (typeof BOARDS)[0];
   selected: boolean;
   onPress: () => void;
+  colors: ReturnType<typeof getColors>;
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -236,11 +250,11 @@ const BoardCard = ({
       <Pressable onPress={handlePress}>
         <View
           style={{
-            backgroundColor: selected ? COLORS.primaryBg : COLORS.white,
+            backgroundColor: selected ? colors.primaryBg : colors.surface,
             borderRadius: 16,
             padding: 16,
             borderWidth: 2,
-            borderColor: selected ? COLORS.primary : COLORS.gray200,
+            borderColor: selected ? colors.primary : colors.border,
             ...SHADOWS.sm,
           }}
         >
@@ -253,12 +267,12 @@ const BoardCard = ({
                 width: 24,
                 height: 24,
                 borderRadius: 12,
-                backgroundColor: COLORS.primary,
+                backgroundColor: colors.primary,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="checkmark" size={14} color="white" />
+              <Check size={14} color="white" strokeWidth={2.5} />
             </View>
           )}
           <View
@@ -266,24 +280,28 @@ const BoardCard = ({
               width: 44,
               height: 44,
               borderRadius: 12,
-              backgroundColor: selected ? COLORS.primaryMuted : COLORS.gray100,
+              backgroundColor: selected ? colors.primaryMuted : colors.gray100,
               alignItems: "center",
               justifyContent: "center",
               marginBottom: 8,
             }}
           >
-            <Ionicons
-              name={board.icon as any}
-              size={22}
-              color={selected ? COLORS.primary : COLORS.gray500}
-            />
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                color: selected ? colors.primary : colors.gray500,
+              }}
+            >
+              {board.name.charAt(0)}
+            </Text>
           </View>
           <Text
-            style={{ fontSize: 16, fontWeight: "700", color: COLORS.gray900 }}
+            style={{ fontSize: 16, fontWeight: "700", color: colors.gray900 }}
           >
             {board.name}
           </Text>
-          <Text style={{ fontSize: 12, color: COLORS.gray500, marginTop: 2 }}>
+          <Text style={{ fontSize: 12, color: colors.gray500, marginTop: 2 }}>
             {board.desc}
           </Text>
         </View>
@@ -297,22 +315,24 @@ const QuestionCard = ({
   question,
   selected,
   onToggle,
+  colors,
 }: {
   question: Question;
   selected: boolean;
   onToggle: () => void;
+  colors: ReturnType<typeof getColors>;
 }) => (
   <Pressable
     onPress={onToggle}
     style={{
       flexDirection: "row",
       alignItems: "flex-start",
-      backgroundColor: selected ? COLORS.primaryBg : COLORS.white,
+      backgroundColor: selected ? colors.primaryBg : colors.surface,
       borderRadius: 12,
       padding: 12,
       marginBottom: 8,
       borderWidth: 1,
-      borderColor: selected ? COLORS.primary : COLORS.gray200,
+      borderColor: selected ? colors.primary : colors.border,
     }}
   >
     <View
@@ -320,19 +340,19 @@ const QuestionCard = ({
         width: 22,
         height: 22,
         borderRadius: 6,
-        backgroundColor: selected ? COLORS.primary : COLORS.gray200,
+        backgroundColor: selected ? colors.primary : colors.gray200,
         alignItems: "center",
         justifyContent: "center",
         marginRight: 10,
         marginTop: 2,
       }}
     >
-      {selected && <Ionicons name="checkmark" size={14} color="white" />}
+      {selected && <Check size={14} color="white" strokeWidth={2.5} />}
     </View>
     <View style={{ flex: 1 }}>
       <MathText text={question.text} fontSize={14} />
       {question.topic && (
-        <Text style={{ fontSize: 11, color: COLORS.gray500, marginTop: 4 }}>
+        <Text style={{ fontSize: 11, color: colors.gray500, marginTop: 4 }}>
           📚 {question.topic}
         </Text>
       )}
@@ -342,6 +362,9 @@ const QuestionCard = ({
 
 export default function CreatePaper() {
   const router = useRouter();
+  const { isDark } = useAppTheme();
+  const colors = getColors(isDark);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<PaperFormData>(initialFormData);
   const [loading, setLoading] = useState(true);
@@ -417,18 +440,24 @@ export default function CreatePaper() {
             `/api/exams/questions/chapters?subject=${encodeURIComponent(
               formData.subject
             )}&class=${encodeURIComponent(formData.className)}`
-          )) as string[];
-          setChapters(
-            res?.length
+          )) as { chapter: string; count: number }[] | string[];
+
+          // Handle both object array and string array responses
+          const chapterNames = res?.length
+            ? Array.isArray(res[0])
               ? res
-              : [
-                  `${formData.subject} - Chapter 1`,
-                  `${formData.subject} - Chapter 2`,
-                  `${formData.subject} - Chapter 3`,
-                  `${formData.subject} - Chapter 4`,
-                  `${formData.subject} - Chapter 5`,
-                ]
-          );
+              : (res as { chapter: string; count: number }[]).map((item) =>
+                  typeof item === "string" ? item : item.chapter
+                )
+            : [
+                `${formData.subject} - Chapter 1`,
+                `${formData.subject} - Chapter 2`,
+                `${formData.subject} - Chapter 3`,
+                `${formData.subject} - Chapter 4`,
+                `${formData.subject} - Chapter 5`,
+              ];
+
+          setChapters(chapterNames as string[]);
         } catch {
           // Fallback mock chapters
           setChapters([
@@ -659,10 +688,10 @@ ${section.selectedQuestions
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: COLORS.white,
+          backgroundColor: colors.white,
         }}
       >
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -675,13 +704,13 @@ ${section.selectedQuestions
           style={{
             fontSize: 20,
             fontWeight: "700",
-            color: COLORS.gray900,
+            color: colors.gray900,
             marginBottom: 4,
           }}
         >
           Basic Information
         </Text>
-        <Text style={{ fontSize: 14, color: COLORS.gray500 }}>
+        <Text style={{ fontSize: 14, color: colors.gray500 }}>
           Enter exam details to get started
         </Text>
       </View>
@@ -692,7 +721,7 @@ ${section.selectedQuestions
           style={{
             fontSize: 14,
             fontWeight: "600",
-            color: COLORS.gray700,
+            color: colors.gray700,
             marginBottom: 10,
           }}
         >
@@ -706,6 +735,7 @@ ${section.selectedQuestions
               selected={formData.className === cls}
               onPress={() => updateFormData({ className: cls })}
               small
+              colors={colors}
             />
           ))}
         </View>
@@ -717,7 +747,7 @@ ${section.selectedQuestions
           style={{
             fontSize: 14,
             fontWeight: "600",
-            color: COLORS.gray700,
+            color: colors.gray700,
             marginBottom: 10,
           }}
         >
@@ -731,6 +761,7 @@ ${section.selectedQuestions
               selected={formData.subject === sub}
               onPress={() => updateFormData({ subject: sub })}
               small
+              colors={colors}
             />
           ))}
         </View>
@@ -742,7 +773,7 @@ ${section.selectedQuestions
           style={{
             fontSize: 14,
             fontWeight: "600",
-            color: COLORS.gray700,
+            color: colors.gray700,
             marginBottom: 8,
           }}
         >
@@ -752,16 +783,16 @@ ${section.selectedQuestions
           value={formData.examTitle}
           onChangeText={(t) => updateFormData({ examTitle: t })}
           placeholder="e.g., Mid-Term Examination 2024"
-          placeholderTextColor={COLORS.gray400}
+          placeholderTextColor={colors.gray400}
           style={{
             borderWidth: 2,
-            borderColor: formData.examTitle ? COLORS.primary : COLORS.gray200,
+            borderColor: formData.examTitle ? colors.primary : colors.gray200,
             borderRadius: 12,
             paddingHorizontal: 16,
             paddingVertical: 14,
             fontSize: 15,
-            color: COLORS.gray800,
-            backgroundColor: COLORS.white,
+            color: colors.gray800,
+            backgroundColor: colors.white,
           }}
         />
       </View>
@@ -773,7 +804,7 @@ ${section.selectedQuestions
             style={{
               fontSize: 14,
               fontWeight: "600",
-              color: COLORS.gray700,
+              color: colors.gray700,
               marginBottom: 8,
             }}
           >
@@ -783,16 +814,16 @@ ${section.selectedQuestions
             value={formData.duration}
             onChangeText={(t) => updateFormData({ duration: t })}
             placeholder="3 Hours"
-            placeholderTextColor={COLORS.gray400}
+            placeholderTextColor={colors.gray400}
             style={{
               borderWidth: 2,
-              borderColor: COLORS.gray200,
+              borderColor: colors.gray200,
               borderRadius: 12,
               paddingHorizontal: 16,
               paddingVertical: 14,
               fontSize: 15,
-              color: COLORS.gray800,
-              backgroundColor: COLORS.white,
+              color: colors.gray800,
+              backgroundColor: colors.white,
             }}
           />
         </View>
@@ -801,7 +832,7 @@ ${section.selectedQuestions
             style={{
               fontSize: 14,
               fontWeight: "600",
-              color: COLORS.gray700,
+              color: colors.gray700,
               marginBottom: 8,
             }}
           >
@@ -814,16 +845,16 @@ ${section.selectedQuestions
             }
             placeholder="100"
             keyboardType="numeric"
-            placeholderTextColor={COLORS.gray400}
+            placeholderTextColor={colors.gray400}
             style={{
               borderWidth: 2,
-              borderColor: COLORS.gray200,
+              borderColor: colors.gray200,
               borderRadius: 12,
               paddingHorizontal: 16,
               paddingVertical: 14,
               fontSize: 15,
-              color: COLORS.gray800,
-              backgroundColor: COLORS.white,
+              color: colors.gray800,
+              backgroundColor: colors.white,
             }}
           />
         </View>
@@ -835,7 +866,7 @@ ${section.selectedQuestions
           style={{
             fontSize: 14,
             fontWeight: "600",
-            color: COLORS.gray700,
+            color: colors.gray700,
             marginBottom: 8,
           }}
         >
@@ -845,16 +876,16 @@ ${section.selectedQuestions
           value={formData.instituteName}
           onChangeText={(t) => updateFormData({ instituteName: t })}
           placeholder="Your School/Institute"
-          placeholderTextColor={COLORS.gray400}
+          placeholderTextColor={colors.gray400}
           style={{
             borderWidth: 2,
-            borderColor: COLORS.gray200,
+            borderColor: colors.gray200,
             borderRadius: 12,
             paddingHorizontal: 16,
             paddingVertical: 14,
             fontSize: 15,
-            color: COLORS.gray800,
-            backgroundColor: COLORS.white,
+            color: colors.gray800,
+            backgroundColor: colors.white,
           }}
         />
       </View>
@@ -869,13 +900,13 @@ ${section.selectedQuestions
           style={{
             fontSize: 20,
             fontWeight: "700",
-            color: COLORS.gray900,
+            color: colors.gray900,
             marginBottom: 4,
           }}
         >
           Select Exam Board
         </Text>
-        <Text style={{ fontSize: 14, color: COLORS.gray500 }}>
+        <Text style={{ fontSize: 14, color: colors.gray500 }}>
           Choose the board or exam type
         </Text>
       </View>
@@ -893,6 +924,7 @@ ${section.selectedQuestions
             board={board}
             selected={formData.board === board.id}
             onPress={() => updateFormData({ board: board.id })}
+            colors={colors}
           />
         ))}
       </View>
@@ -907,13 +939,13 @@ ${section.selectedQuestions
           style={{
             fontSize: 20,
             fontWeight: "700",
-            color: COLORS.gray900,
+            color: colors.gray900,
             marginBottom: 4,
           }}
         >
           Select Chapters
         </Text>
-        <Text style={{ fontSize: 14, color: COLORS.gray500 }}>
+        <Text style={{ fontSize: 14, color: colors.gray500 }}>
           Choose topics to include ({formData.selectedChapters.length} selected)
         </Text>
       </View>
@@ -922,17 +954,17 @@ ${section.selectedQuestions
         const selected = formData.selectedChapters.includes(chapter);
         return (
           <Pressable
-            key={chapter}
+            key={`chapter-${idx}`}
             onPress={() => toggleChapter(chapter)}
             style={{
               flexDirection: "row",
               alignItems: "center",
-              backgroundColor: selected ? COLORS.primaryBg : COLORS.white,
+              backgroundColor: selected ? colors.primaryBg : colors.white,
               borderRadius: 12,
               padding: 16,
               marginBottom: 10,
               borderWidth: 2,
-              borderColor: selected ? COLORS.primary : COLORS.gray200,
+              borderColor: selected ? colors.primary : colors.gray200,
               ...SHADOWS.sm,
             }}
           >
@@ -941,36 +973,35 @@ ${section.selectedQuestions
                 width: 28,
                 height: 28,
                 borderRadius: 8,
-                backgroundColor: selected ? COLORS.primary : COLORS.gray200,
+                backgroundColor: selected ? colors.primary : colors.gray200,
                 alignItems: "center",
                 justifyContent: "center",
                 marginRight: 12,
               }}
             >
-              {selected && (
-                <Ionicons name="checkmark" size={16} color="white" />
-              )}
+              {selected && <Check size={16} color="white" strokeWidth={2.5} />}
             </View>
             <View style={{ flex: 1 }}>
               <Text
                 style={{
                   fontSize: 15,
                   fontWeight: "600",
-                  color: COLORS.gray800,
+                  color: colors.gray800,
                 }}
               >
                 {chapter}
               </Text>
               <Text
-                style={{ fontSize: 12, color: COLORS.gray500, marginTop: 2 }}
+                style={{ fontSize: 12, color: colors.gray500, marginTop: 2 }}
               >
                 Chapter {idx + 1}
               </Text>
             </View>
-            <Ionicons
-              name={selected ? "bookmark" : "bookmark-outline"}
+            <Bookmark
               size={20}
-              color={selected ? COLORS.primary : COLORS.gray400}
+              color={selected ? colors.primary : colors.gray400}
+              strokeWidth={2}
+              fill={selected ? colors.primary : "transparent"}
             />
           </Pressable>
         );
@@ -986,13 +1017,13 @@ ${section.selectedQuestions
           style={{
             fontSize: 20,
             fontWeight: "700",
-            color: COLORS.gray900,
+            color: colors.gray900,
             marginBottom: 4,
           }}
         >
           Select Questions
         </Text>
-        <Text style={{ fontSize: 14, color: COLORS.gray500 }}>
+        <Text style={{ fontSize: 14, color: colors.gray500 }}>
           Questions are auto-organized by section type
         </Text>
       </View>
@@ -1001,7 +1032,7 @@ ${section.selectedQuestions
       <View
         style={{
           flexDirection: "row",
-          backgroundColor: COLORS.primaryBg,
+          backgroundColor: colors.primaryBg,
           borderRadius: 12,
           padding: 12,
           marginBottom: 16,
@@ -1009,55 +1040,55 @@ ${section.selectedQuestions
       >
         <View style={{ flex: 1, alignItems: "center" }}>
           <Text
-            style={{ fontSize: 18, fontWeight: "700", color: COLORS.primary }}
+            style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}
           >
             {formData.sections.reduce(
               (sum, s) => sum + s.selectedQuestions.length,
               0
             )}
           </Text>
-          <Text style={{ fontSize: 11, color: COLORS.gray600 }}>Questions</Text>
+          <Text style={{ fontSize: 11, color: colors.gray600 }}>Questions</Text>
         </View>
         <View
           style={{
             width: 1,
-            backgroundColor: COLORS.primary,
+            backgroundColor: colors.primary,
             marginHorizontal: 12,
             opacity: 0.3,
           }}
         />
         <View style={{ flex: 1, alignItems: "center" }}>
           <Text
-            style={{ fontSize: 18, fontWeight: "700", color: COLORS.primary }}
+            style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}
           >
             {calculateTotalMarks()}
           </Text>
-          <Text style={{ fontSize: 11, color: COLORS.gray600 }}>
+          <Text style={{ fontSize: 11, color: colors.gray600 }}>
             Total Marks
           </Text>
         </View>
         <View
           style={{
             width: 1,
-            backgroundColor: COLORS.primary,
+            backgroundColor: colors.primary,
             marginHorizontal: 12,
             opacity: 0.3,
           }}
         />
         <View style={{ flex: 1, alignItems: "center" }}>
           <Text
-            style={{ fontSize: 18, fontWeight: "700", color: COLORS.primary }}
+            style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}
           >
             {questions.length}
           </Text>
-          <Text style={{ fontSize: 11, color: COLORS.gray600 }}>Available</Text>
+          <Text style={{ fontSize: 11, color: colors.gray600 }}>Available</Text>
         </View>
       </View>
 
       {loadingQuestions ? (
         <View style={{ alignItems: "center", paddingVertical: 40 }}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={{ marginTop: 12, color: COLORS.gray500 }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: 12, color: colors.gray500 }}>
             Loading questions...
           </Text>
         </View>
@@ -1070,11 +1101,11 @@ ${section.selectedQuestions
             <View
               key={sIdx}
               style={{
-                backgroundColor: COLORS.white,
+                backgroundColor: colors.white,
                 borderRadius: 16,
                 marginBottom: 12,
                 borderWidth: 1,
-                borderColor: COLORS.gray200,
+                borderColor: colors.gray200,
                 overflow: "hidden",
                 ...SHADOWS.sm,
               }}
@@ -1089,8 +1120,8 @@ ${section.selectedQuestions
                   padding: 16,
                   backgroundColor:
                     section.selectedQuestions.length > 0
-                      ? COLORS.primaryBg
-                      : COLORS.gray50,
+                      ? colors.primaryBg
+                      : colors.gray50,
                 }}
               >
                 <View style={{ flex: 1 }}>
@@ -1098,7 +1129,7 @@ ${section.selectedQuestions
                     style={{
                       fontSize: 15,
                       fontWeight: "700",
-                      color: COLORS.gray900,
+                      color: colors.gray900,
                     }}
                   >
                     {section.title}
@@ -1106,7 +1137,7 @@ ${section.selectedQuestions
                   <Text
                     style={{
                       fontSize: 12,
-                      color: COLORS.gray500,
+                      color: colors.gray500,
                       marginTop: 2,
                     }}
                   >
@@ -1119,8 +1150,8 @@ ${section.selectedQuestions
                     style={{
                       backgroundColor:
                         section.selectedQuestions.length > 0
-                          ? COLORS.primary
-                          : COLORS.gray300,
+                          ? colors.primary
+                          : colors.gray300,
                       paddingHorizontal: 10,
                       paddingVertical: 4,
                       borderRadius: 12,
@@ -1131,18 +1162,26 @@ ${section.selectedQuestions
                       style={{
                         fontSize: 12,
                         fontWeight: "600",
-                        color: COLORS.white,
+                        color: colors.white,
                       }}
                     >
                       {section.selectedQuestions.length} /{" "}
                       {sectionQuestions.length}
                     </Text>
                   </View>
-                  <Ionicons
-                    name={isExpanded ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color={COLORS.gray500}
-                  />
+                  {isExpanded ? (
+                    <ChevronUp
+                      size={20}
+                      color={colors.gray500}
+                      strokeWidth={2}
+                    />
+                  ) : (
+                    <ChevronDown
+                      size={20}
+                      color={colors.gray500}
+                      strokeWidth={2}
+                    />
+                  )}
                 </View>
               </Pressable>
 
@@ -1151,12 +1190,12 @@ ${section.selectedQuestions
                 <View style={{ padding: 12, paddingTop: 0 }}>
                   {sectionQuestions.length === 0 ? (
                     <View style={{ alignItems: "center", paddingVertical: 20 }}>
-                      <Ionicons
-                        name="document-text-outline"
+                      <FileText
                         size={32}
-                        color={COLORS.gray300}
+                        color={colors.gray300}
+                        strokeWidth={1.5}
                       />
-                      <Text style={{ color: COLORS.gray500, marginTop: 8 }}>
+                      <Text style={{ color: colors.gray500, marginTop: 8 }}>
                         No questions available for this section
                       </Text>
                     </View>
@@ -1168,6 +1207,7 @@ ${section.selectedQuestions
                           question={q}
                           selected={isQuestionSelected(q._id, sIdx)}
                           onToggle={() => toggleQuestionInSection(sIdx, q)}
+                          colors={colors}
                         />
                       ))}
                     </ScrollView>
@@ -1195,13 +1235,13 @@ ${section.selectedQuestions
             style={{
               fontSize: 20,
               fontWeight: "700",
-              color: COLORS.gray900,
+              color: colors.gray900,
               marginBottom: 4,
             }}
           >
             Paper Preview
           </Text>
-          <Text style={{ fontSize: 14, color: COLORS.gray500 }}>
+          <Text style={{ fontSize: 14, color: colors.gray500 }}>
             Review your question paper
           </Text>
         </View>
@@ -1209,12 +1249,12 @@ ${section.selectedQuestions
         {/* Paper Header Card */}
         <View
           style={{
-            backgroundColor: COLORS.white,
+            backgroundColor: colors.white,
             borderRadius: 16,
             padding: 20,
             marginBottom: 16,
             borderWidth: 2,
-            borderColor: COLORS.primaryMuted,
+            borderColor: colors.primaryMuted,
             ...SHADOWS.md,
           }}
         >
@@ -1223,7 +1263,7 @@ ${section.selectedQuestions
               textAlign: "center",
               fontSize: 18,
               fontWeight: "700",
-              color: COLORS.gray900,
+              color: colors.gray900,
             }}
           >
             {formData.instituteName || "Your Institute"}
@@ -1232,7 +1272,7 @@ ${section.selectedQuestions
             style={{
               textAlign: "center",
               fontSize: 16,
-              color: COLORS.gray600,
+              color: colors.gray600,
               marginTop: 4,
             }}
           >
@@ -1245,14 +1285,14 @@ ${section.selectedQuestions
               justifyContent: "space-between",
               borderTopWidth: 1,
               borderBottomWidth: 1,
-              borderColor: COLORS.gray200,
+              borderColor: colors.gray200,
               paddingVertical: 12,
               marginTop: 16,
             }}
           >
-            <Text style={{ color: COLORS.gray600 }}>{formData.className}</Text>
-            <Text style={{ color: COLORS.gray600 }}>{formData.subject}</Text>
-            <Text style={{ color: COLORS.gray600 }}>{formData.duration}</Text>
+            <Text style={{ color: colors.gray600 }}>{formData.className}</Text>
+            <Text style={{ color: colors.gray600 }}>{formData.subject}</Text>
+            <Text style={{ color: colors.gray600 }}>{formData.duration}</Text>
           </View>
 
           <View
@@ -1263,40 +1303,40 @@ ${section.selectedQuestions
             }}
           >
             <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 11, color: COLORS.gray500 }}>Board</Text>
+              <Text style={{ fontSize: 11, color: colors.gray500 }}>Board</Text>
               <Text
                 style={{
                   fontSize: 15,
                   fontWeight: "600",
-                  color: COLORS.gray900,
+                  color: colors.gray900,
                 }}
               >
                 {formData.board}
               </Text>
             </View>
             <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 11, color: COLORS.gray500 }}>
+              <Text style={{ fontSize: 11, color: colors.gray500 }}>
                 Total Marks
               </Text>
               <Text
                 style={{
                   fontSize: 15,
                   fontWeight: "600",
-                  color: COLORS.primary,
+                  color: colors.primary,
                 }}
               >
                 {calculateTotalMarks()}
               </Text>
             </View>
             <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 11, color: COLORS.gray500 }}>
+              <Text style={{ fontSize: 11, color: colors.gray500 }}>
                 Questions
               </Text>
               <Text
                 style={{
                   fontSize: 15,
                   fontWeight: "600",
-                  color: COLORS.gray900,
+                  color: colors.gray900,
                 }}
               >
                 {totalQs}
@@ -1312,12 +1352,12 @@ ${section.selectedQuestions
             <View
               key={idx}
               style={{
-                backgroundColor: COLORS.white,
+                backgroundColor: colors.white,
                 borderRadius: 12,
                 padding: 16,
                 marginBottom: 12,
                 borderLeftWidth: 4,
-                borderLeftColor: COLORS.primary,
+                borderLeftColor: colors.primary,
                 ...SHADOWS.sm,
               }}
             >
@@ -1333,14 +1373,14 @@ ${section.selectedQuestions
                   style={{
                     fontSize: 15,
                     fontWeight: "700",
-                    color: COLORS.gray900,
+                    color: colors.gray900,
                   }}
                 >
                   {section.title}
                 </Text>
                 <View
                   style={{
-                    backgroundColor: COLORS.primaryBg,
+                    backgroundColor: colors.primaryBg,
                     paddingHorizontal: 8,
                     paddingVertical: 4,
                     borderRadius: 8,
@@ -1350,7 +1390,7 @@ ${section.selectedQuestions
                     style={{
                       fontSize: 12,
                       fontWeight: "600",
-                      color: COLORS.primary,
+                      color: colors.primary,
                     }}
                   >
                     {section.selectedQuestions.length} ×{" "}
@@ -1366,14 +1406,14 @@ ${section.selectedQuestions
                   key={q._id}
                   style={{ marginTop: 8, flexDirection: "row" }}
                 >
-                  <Text style={{ fontSize: 13, color: COLORS.gray600 }}>
+                  <Text style={{ fontSize: 13, color: colors.gray600 }}>
                     {qIdx + 1}.{" "}
                   </Text>
                   <View style={{ flex: 1 }}>
                     <MathText
                       text={q.text}
                       fontSize={13}
-                      style={{ color: COLORS.gray600 }}
+                      style={{ color: colors.gray600 }}
                     />
                   </View>
                 </View>
@@ -1382,7 +1422,7 @@ ${section.selectedQuestions
                 <Text
                   style={{
                     fontSize: 12,
-                    color: COLORS.gray500,
+                    color: colors.gray500,
                     marginTop: 8,
                     fontStyle: "italic",
                   }}
@@ -1396,7 +1436,7 @@ ${section.selectedQuestions
         {/* Ready Message */}
         <View
           style={{
-            backgroundColor: COLORS.primaryBg,
+            backgroundColor: colors.primaryBg,
             borderRadius: 12,
             padding: 16,
             marginTop: 8,
@@ -1404,8 +1444,8 @@ ${section.selectedQuestions
             alignItems: "center",
           }}
         >
-          <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
-          <Text style={{ marginLeft: 12, color: COLORS.primaryDark, flex: 1 }}>
+          <CheckCircle2 size={24} color={colors.primary} strokeWidth={2} />
+          <Text style={{ marginLeft: 12, color: colors.primaryDark, flex: 1 }}>
             Paper is ready! Click Complete to save and export.
           </Text>
         </View>
@@ -1430,23 +1470,27 @@ ${section.selectedQuestions
     }
   };
 
+  // Use tab bar color (green for light, indigo for dark)
+  const headerGradient = isDark
+    ? ["#6366F1", "#4F46E5"]
+    : ["#059669", "#047857"];
+
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.white }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       edges={["top"]}
     >
       {/* Header */}
       <LinearGradient
-        colors={GRADIENTS.primary}
+        colors={headerGradient as [string, string]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ paddingTop: 8, paddingBottom: 20, paddingHorizontal: 20 }}
+        style={{ paddingTop: 16, paddingBottom: 20, paddingHorizontal: 20 }}
       >
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            marginBottom: 20,
           }}
         >
           <Pressable
@@ -1461,74 +1505,16 @@ ${section.selectedQuestions
               marginRight: 12,
             }}
           >
-            <Ionicons name="arrow-back" size={22} color="white" />
+            <ArrowLeft size={22} color="white" strokeWidth={2.5} />
           </Pressable>
           <View>
-            <Text style={{ color: "white", fontSize: 20, fontWeight: "700" }}>
+            <Text style={{ color: "white", fontSize: 24, fontWeight: "700" }}>
               Create Question Paper
             </Text>
-            <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>
+            <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 13 }}>
               Step {currentStep} of 5: {STEPS[currentStep - 1].title}
             </Text>
           </View>
-        </View>
-
-        {/* Progress Steps */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          {STEPS.map((step, idx) => (
-            <View
-              key={step.id}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                flex: idx < STEPS.length - 1 ? 1 : 0,
-              }}
-            >
-              <View
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor:
-                    currentStep >= step.id ? "white" : "rgba(255,255,255,0.3)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {currentStep > step.id ? (
-                  <Ionicons name="checkmark" size={18} color={COLORS.primary} />
-                ) : (
-                  <Ionicons
-                    name={step.icon as any}
-                    size={16}
-                    color={
-                      currentStep === step.id
-                        ? COLORS.primary
-                        : "rgba(255,255,255,0.6)"
-                    }
-                  />
-                )}
-              </View>
-              {idx < STEPS.length - 1 && (
-                <View
-                  style={{
-                    flex: 1,
-                    height: 3,
-                    backgroundColor:
-                      currentStep > step.id ? "white" : "rgba(255,255,255,0.3)",
-                    marginHorizontal: 4,
-                    borderRadius: 2,
-                  }}
-                />
-              )}
-            </View>
-          ))}
         </View>
       </LinearGradient>
 
@@ -1543,9 +1529,9 @@ ${section.selectedQuestions
           flexDirection: "row",
           paddingHorizontal: 20,
           paddingVertical: 16,
-          backgroundColor: COLORS.white,
+          backgroundColor: colors.white,
           borderTopWidth: 1,
-          borderTopColor: COLORS.gray100,
+          borderTopColor: colors.gray100,
           gap: 12,
         }}
       >
@@ -1557,22 +1543,22 @@ ${section.selectedQuestions
             paddingVertical: 14,
             borderRadius: 12,
             borderWidth: 2,
-            borderColor: currentStep === 1 ? COLORS.gray200 : COLORS.primary,
+            borderColor: currentStep === 1 ? colors.gray200 : colors.primary,
             alignItems: "center",
             flexDirection: "row",
             justifyContent: "center",
           }}
         >
-          <Ionicons
-            name="arrow-back"
+          <ArrowLeft
             size={18}
-            color={currentStep === 1 ? COLORS.gray400 : COLORS.primary}
+            color={currentStep === 1 ? colors.gray400 : colors.primary}
+            strokeWidth={2.5}
           />
           <Text
             style={{
               marginLeft: 8,
               fontWeight: "600",
-              color: currentStep === 1 ? COLORS.gray400 : COLORS.primary,
+              color: currentStep === 1 ? colors.gray400 : colors.primary,
             }}
           >
             Back
@@ -1589,7 +1575,7 @@ ${section.selectedQuestions
               colors={
                 canProceed()
                   ? GRADIENTS.primary
-                  : [COLORS.gray300, COLORS.gray300]
+                  : [colors.gray300, colors.gray300]
               }
               style={{
                 paddingVertical: 14,
@@ -1603,7 +1589,7 @@ ${section.selectedQuestions
               >
                 Next
               </Text>
-              <Ionicons name="arrow-forward" size={18} color="white" />
+              <ArrowRight size={18} color="white" strokeWidth={2.5} />
             </LinearGradient>
           </Pressable>
         ) : (
@@ -1620,7 +1606,7 @@ ${section.selectedQuestions
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="checkmark-circle" size={18} color="white" />
+              <CheckCircle2 size={18} color="white" strokeWidth={2.5} />
               <Text
                 style={{ fontWeight: "600", color: "white", marginLeft: 8 }}
               >

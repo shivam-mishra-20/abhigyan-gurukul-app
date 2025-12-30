@@ -1,22 +1,18 @@
 import { apiFetch } from "@/lib/api";
+import { useAppTheme } from "@/lib/context";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-
-const COLORS = {
-  primary: "#5ab348",
-  purple: "#8b5cf6",
-};
 
 interface Announcement {
   _id: string;
@@ -32,6 +28,7 @@ interface BatchOption {
 }
 
 export default function TeacherAnnouncements() {
+  const { isDark } = useAppTheme();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [batches, setBatches] = useState<BatchOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,10 +48,14 @@ export default function TeacherAnnouncements() {
         apiFetch("/api/announcements"),
         apiFetch("/api/teacher/batches"),
       ]);
-      
-      const annData = announcementsRes as { announcements?: Announcement[] } | Announcement[];
-      setAnnouncements(Array.isArray(annData) ? annData : annData?.announcements || []);
-      
+
+      const annData = announcementsRes as
+        | { announcements?: Announcement[] }
+        | Announcement[];
+      setAnnouncements(
+        Array.isArray(annData) ? annData : annData?.announcements || []
+      );
+
       const batchData = batchesRes as { batches: BatchOption[] };
       setBatches(batchData?.batches || []);
     } catch (error) {
@@ -74,7 +75,7 @@ export default function TeacherAnnouncements() {
       Alert.alert("Error", "Please fill in title and content");
       return;
     }
-    
+
     setSaving(true);
     try {
       await apiFetch("/api/announcements", {
@@ -88,7 +89,12 @@ export default function TeacherAnnouncements() {
           isPublished: true,
         }),
       });
-      setFormData({ title: "", content: "", priority: "normal", targetBatch: "" });
+      setFormData({
+        title: "",
+        content: "",
+        priority: "normal",
+        targetBatch: "",
+      });
       setShowForm(false);
       fetchData();
       Alert.alert("Success", "Announcement sent successfully");
@@ -102,13 +108,25 @@ export default function TeacherAnnouncements() {
   const getPriorityStyle = (priority: string) => {
     switch (priority) {
       case "urgent":
-        return { bg: "bg-red-100", text: "text-red-700" };
+        return {
+          bg: isDark ? "bg-red-900" : "bg-red-100",
+          text: isDark ? "text-red-300" : "text-red-700",
+        };
       case "high":
-        return { bg: "bg-orange-100", text: "text-orange-700" };
+        return {
+          bg: isDark ? "bg-orange-900" : "bg-orange-100",
+          text: isDark ? "text-orange-300" : "text-orange-700",
+        };
       case "normal":
-        return { bg: "bg-blue-100", text: "text-blue-700" };
+        return {
+          bg: isDark ? "bg-blue-900" : "bg-blue-100",
+          text: isDark ? "text-blue-300" : "text-blue-700",
+        };
       default:
-        return { bg: "bg-gray-100", text: "text-gray-700" };
+        return {
+          bg: isDark ? "bg-gray-700" : "bg-gray-100",
+          text: isDark ? "text-gray-300" : "text-gray-700",
+        };
     }
   };
 
@@ -123,16 +141,16 @@ export default function TeacherAnnouncements() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color={COLORS.purple} />
+      <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900">
+        <ActivityIndicator size="large" color="#8b5cf6" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <View className="pt-14 pb-6 px-6" style={{ backgroundColor: COLORS.purple }}>
+      <View className="pt-14 pb-6 px-6 bg-purple-600 dark:bg-purple-700">
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-white text-2xl font-bold">Announcements</Text>
@@ -142,9 +160,9 @@ export default function TeacherAnnouncements() {
           </View>
           <Pressable
             onPress={() => setShowForm(true)}
-            className="bg-white p-3 rounded-full"
+            className="bg-white dark:bg-gray-800 p-3 rounded-full"
           >
-            <Ionicons name="add" size={24} color={COLORS.purple} />
+            <Ionicons name="add" size={24} color="#8b5cf6" />
           </Pressable>
         </View>
       </View>
@@ -158,18 +176,23 @@ export default function TeacherAnnouncements() {
               setRefreshing(true);
               fetchData();
             }}
-            colors={[COLORS.purple]}
+            colors={["#8b5cf6"]}
           />
         }
       >
         {announcements.length === 0 ? (
           <View className="items-center py-12">
-            <Ionicons name="megaphone-outline" size={64} color="#d1d5db" />
-            <Text className="text-gray-500 text-lg mt-4">No announcements yet</Text>
+            <Ionicons
+              name="megaphone-outline"
+              size={64}
+              color={isDark ? "#4b5563" : "#d1d5db"}
+            />
+            <Text className="text-gray-500 dark:text-gray-400 text-lg mt-4">
+              No announcements yet
+            </Text>
             <Pressable
               onPress={() => setShowForm(true)}
-              className="mt-4 px-6 py-3 rounded-full"
-              style={{ backgroundColor: COLORS.purple }}
+              className="mt-4 px-6 py-3 rounded-full bg-purple-600"
             >
               <Text className="text-white font-semibold">Create First</Text>
             </Pressable>
@@ -180,37 +203,45 @@ export default function TeacherAnnouncements() {
             return (
               <View
                 key={announcement._id}
-                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4"
               >
                 <View className="flex-row items-start justify-between mb-3">
                   <View className="flex-row items-center flex-1">
-                    <View className="w-10 h-10 rounded-xl bg-purple-100 items-center justify-center mr-3">
-                      <Ionicons name="megaphone" size={20} color={COLORS.purple} />
+                    <View className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900 items-center justify-center mr-3">
+                      <Ionicons name="megaphone" size={20} color="#8b5cf6" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-gray-900 font-semibold" numberOfLines={1}>
+                      <Text
+                        className="text-gray-900 dark:text-gray-100 font-semibold"
+                        numberOfLines={1}
+                      >
                         {announcement.title}
                       </Text>
-                      <Text className="text-gray-500 text-xs">
+                      <Text className="text-gray-500 dark:text-gray-400 text-xs">
                         {formatDate(announcement.createdAt)}
                       </Text>
                     </View>
                   </View>
-                  <View className={`px-2 py-1 rounded-full ${priorityStyle.bg}`}>
+                  <View
+                    className={`px-2 py-1 rounded-full ${priorityStyle.bg}`}
+                  >
                     <Text className={`text-xs ${priorityStyle.text}`}>
                       {announcement.priority}
                     </Text>
                   </View>
                 </View>
 
-                <Text className="text-gray-700" numberOfLines={3}>
+                <Text
+                  className="text-gray-700 dark:text-gray-300"
+                  numberOfLines={3}
+                >
                   {announcement.content}
                 </Text>
 
                 {announcement.targetBatch && (
                   <View className="mt-3">
-                    <View className="bg-gray-100 px-2 py-1 rounded self-start">
-                      <Text className="text-gray-600 text-xs">
+                    <View className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded self-start">
+                      <Text className="text-gray-600 dark:text-gray-300 text-xs">
                         {announcement.targetBatch}
                       </Text>
                     </View>
@@ -226,36 +257,46 @@ export default function TeacherAnnouncements() {
       {/* Create Modal */}
       <Modal visible={showForm} transparent animationType="slide">
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6">
+          <View className="bg-white dark:bg-gray-800 rounded-t-3xl p-6">
             <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-xl font-bold text-gray-900">
+              <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 New Announcement
               </Text>
               <Pressable onPress={() => setShowForm(false)}>
-                <Ionicons name="close" size={24} color="#9ca3af" />
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={isDark ? "#9ca3af" : "#9ca3af"}
+                />
               </Pressable>
             </View>
 
             <TextInput
               placeholder="Title *"
+              placeholderTextColor={isDark ? "#9ca3af" : "#9ca3af"}
               value={formData.title}
               onChangeText={(text) => setFormData({ ...formData, title: text })}
-              className="border border-gray-200 rounded-xl px-4 py-3 mb-3 text-gray-800"
+              className="border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 mb-3 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-900"
             />
 
             <TextInput
               placeholder="Message *"
+              placeholderTextColor={isDark ? "#9ca3af" : "#9ca3af"}
               value={formData.content}
-              onChangeText={(text) => setFormData({ ...formData, content: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, content: text })
+              }
               multiline
               numberOfLines={4}
-              className="border border-gray-200 rounded-xl px-4 py-3 mb-3 text-gray-800 h-24"
+              className="border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 mb-3 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-900 h-24"
               textAlignVertical="top"
             />
 
             <View className="flex-row gap-3 mb-4">
               <View className="flex-1">
-                <Text className="text-gray-600 text-sm mb-2">Priority</Text>
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                  Priority
+                </Text>
                 <View className="flex-row flex-wrap gap-2">
                   {(["low", "normal", "high", "urgent"] as const).map((p) => (
                     <Pressable
@@ -263,15 +304,15 @@ export default function TeacherAnnouncements() {
                       onPress={() => setFormData({ ...formData, priority: p })}
                       className={`px-3 py-2 rounded-lg ${
                         formData.priority === p
-                          ? "bg-purple-100"
-                          : "bg-gray-100"
+                          ? "bg-purple-100 dark:bg-purple-900"
+                          : "bg-gray-100 dark:bg-gray-700"
                       }`}
                     >
                       <Text
                         className={`capitalize ${
                           formData.priority === p
-                            ? "text-purple-700"
-                            : "text-gray-600"
+                            ? "text-purple-700 dark:text-purple-300"
+                            : "text-gray-600 dark:text-gray-300"
                         }`}
                       >
                         {p}
@@ -283,19 +324,23 @@ export default function TeacherAnnouncements() {
             </View>
 
             <View className="mb-6">
-              <Text className="text-gray-600 text-sm mb-2">Target Batch</Text>
+              <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                Target Batch
+              </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <Pressable
                   onPress={() => setFormData({ ...formData, targetBatch: "" })}
                   className={`px-4 py-2 rounded-lg mr-2 ${
-                    formData.targetBatch === "" ? "bg-purple-100" : "bg-gray-100"
+                    formData.targetBatch === ""
+                      ? "bg-purple-100 dark:bg-purple-900"
+                      : "bg-gray-100 dark:bg-gray-700"
                   }`}
                 >
                   <Text
                     className={
                       formData.targetBatch === ""
-                        ? "text-purple-700"
-                        : "text-gray-600"
+                        ? "text-purple-700 dark:text-purple-300"
+                        : "text-gray-600 dark:text-gray-300"
                     }
                   >
                     All Students
@@ -309,15 +354,15 @@ export default function TeacherAnnouncements() {
                     }
                     className={`px-4 py-2 rounded-lg mr-2 ${
                       formData.targetBatch === batch.name
-                        ? "bg-purple-100"
-                        : "bg-gray-100"
+                        ? "bg-purple-100 dark:bg-purple-900"
+                        : "bg-gray-100 dark:bg-gray-700"
                     }`}
                   >
                     <Text
                       className={
                         formData.targetBatch === batch.name
-                          ? "text-purple-700"
-                          : "text-gray-600"
+                          ? "text-purple-700 dark:text-purple-300"
+                          : "text-gray-600 dark:text-gray-300"
                       }
                     >
                       {batch.name}
@@ -330,8 +375,9 @@ export default function TeacherAnnouncements() {
             <Pressable
               onPress={handleSubmit}
               disabled={saving}
-              className="py-4 rounded-xl items-center"
-              style={{ backgroundColor: saving ? "#9ca3af" : COLORS.purple }}
+              className={`py-4 rounded-xl items-center ${
+                saving ? "bg-gray-400 dark:bg-gray-700" : "bg-purple-600"
+              }`}
             >
               <Text className="text-white font-bold text-lg">
                 {saving ? "Sending..." : "Send Announcement"}

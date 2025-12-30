@@ -5,38 +5,40 @@
 
 import { Platform } from 'react-native';
 
-// Primary brand color (rich green)
-const tintColorLight = '#8BC53F';
-const tintColorDark = '#ffffff';
+// LIGHT THEME: Green for tab bar/header, Indigo for content
+// DARK THEME: Indigo primary, Green for success only
+const tintColorLight = '#059669';  // Green for tab bar in light mode
+const tintColorDark = '#6366F1';   // Indigo for dark mode
 
-// Professional color palette using primary + neutrals and accents
+// Professional color palette using indigo primary + neutrals
 export const Palette = {
-  primary: '#4E74F9',
+  primary: '#4F46E5',        // Indigo 600 - main accent
   primaryOn: '#FFFFFF',
-  primaryDark: '#6EA530',
-  accent: '#0A7EA4',
-  neutral: '#687076',
-  background: '#FFFFFF',
-  surface: '#F7F9F8',
-  textPrimary: '#11181C',
+  primaryDark: '#3730A3',    // Indigo 800
+  accent: '#0EA5E9',         // Sky 500
+  neutral: '#6B7280',        // Gray 500
+  background: '#FAFAFA',     // Off-white
+  surface: '#FFFFFF',
+  textPrimary: '#111827',    // Gray 900
+  tabBar: '#059669',         // Green for tab bar only
 };
 
 export const Colors = {
   light: {
     text: Palette.textPrimary,
     background: Palette.background,
-    tint: tintColorLight,
+    tint: tintColorLight,    // Green for tab bar
     icon: Palette.neutral,
     tabIconDefault: Palette.neutral,
-    tabIconSelected: tintColorLight,
+    tabIconSelected: tintColorLight,  // Green for selected tab
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: '#FAFAFA',
+    background: '#18181B',
+    tint: tintColorDark,     // Indigo for dark mode
+    icon: '#A1A1AA',
+    tabIconDefault: '#A1A1AA',
+    tabIconSelected: tintColorDark,  // Indigo for selected tab
   },
 };
 

@@ -1,36 +1,30 @@
-/**
- * Teacher Tab Layout
- *
- * Clean, focused tab navigation with only essential screens.
- * Secondary features accessible via "More" hub.
- */
-
-import { SHADOWS, THEME } from "@/lib/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { AnimatedTabBar } from "@/components/animated-tab-bar";
+import { useAppTheme } from "@/lib/context";
 import { Tabs } from "expo-router";
+import {
+  ClipboardCheck,
+  FilePlus,
+  Home,
+  LayoutGrid,
+} from "lucide-react-native";
 import React from "react";
-import { Platform } from "react-native";
 
 export default function TeacherLayout() {
+  const { isDark } = useAppTheme();
+
   return (
     <Tabs
+      tabBar={(props) => (
+        <AnimatedTabBar
+          {...props}
+          activeTintColor={isDark ? "#6366F1" : "#059669"} // Indigo for dark, green for light
+          inactiveTintColor={isDark ? "#A1A1AA" : "#6B7280"}
+          backgroundColor={isDark ? "#27272A" : "#FFFFFF"}
+          isDark={isDark}
+        />
+      )}
       screenOptions={{
-        tabBarActiveTintColor: THEME.primary,
-        tabBarInactiveTintColor: THEME.gray400,
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: THEME.white,
-          borderTopWidth: 1,
-          borderTopColor: THEME.gray200,
-          paddingBottom: Platform.OS === "ios" ? 24 : 8,
-          paddingTop: 8,
-          height: Platform.OS === "ios" ? 85 : 65,
-          ...SHADOWS.sm,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-        },
       }}
     >
       {/* Main Tabs */}
@@ -39,7 +33,16 @@ export default function TeacherLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Home size={size} color={color} strokeWidth={2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="create-paper"
+        options={{
+          title: "Create",
+          tabBarIcon: ({ color, size }) => (
+            <FilePlus size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -48,16 +51,7 @@ export default function TeacherLayout() {
         options={{
           title: "Exams",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="reviews"
-        options={{
-          title: "Reviews",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkmark-circle" size={size} color={color} />
+            <ClipboardCheck size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -66,14 +60,14 @@ export default function TeacherLayout() {
         options={{
           title: "More",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="apps" size={size} color={color} />
+            <LayoutGrid size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
 
       {/* Hidden screens - accessible via navigation from More or Home */}
       <Tabs.Screen name="profile" options={{ href: null }} />
-      <Tabs.Screen name="create-paper" options={{ href: null }} />
+      <Tabs.Screen name="reviews" options={{ href: null }} />
       <Tabs.Screen name="batches" options={{ href: null }} />
       <Tabs.Screen name="students" options={{ href: null }} />
       <Tabs.Screen name="performance" options={{ href: null }} />
@@ -82,6 +76,7 @@ export default function TeacherLayout() {
       <Tabs.Screen name="student-report" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="build-exam" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
     </Tabs>
   );
 }

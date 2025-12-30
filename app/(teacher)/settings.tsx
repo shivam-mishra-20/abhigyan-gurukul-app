@@ -1,6 +1,6 @@
-import { COLORS, SHADOWS } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
 import { getUser, logout } from "@/lib/auth";
+import { useAppTheme } from "@/lib/context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -15,6 +15,18 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const SETTINGS_STORAGE_KEY = "@teacher_settings";
+
+interface Settings {
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  examReminders: boolean;
+  doubtAlerts: boolean;
+  autoSave: boolean;
+  language: string;
+}
 
 interface SettingItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -36,101 +48,100 @@ const SettingItem = ({
   toggleValue,
   onToggle,
   danger,
-}: SettingItemProps) => (
-  <Pressable
-    onPress={onPress}
-    style={{
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: 16,
-      paddingHorizontal: 16,
-      backgroundColor: "#fff",
-    }}
-  >
-    <View
-      style={{
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: danger ? "#FEE2E2" : COLORS.primaryBg,
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: 14,
-      }}
+}: SettingItemProps) => {
+  const { isDark } = useAppTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-row items-center px-4 py-4 bg-white dark:bg-dark-card"
     >
-      <Ionicons
-        name={icon}
-        size={20}
-        color={danger ? "#DC2626" : COLORS.primary}
-      />
-    </View>
-    <View style={{ flex: 1 }}>
-      <Text
-        style={{
-          fontSize: 15,
-          fontWeight: "600",
-          color: danger ? "#DC2626" : COLORS.gray800,
-        }}
+      <View
+        className={`w-10 h-10 rounded-xl items-center justify-center mr-3.5 ${
+          danger
+            ? "bg-red-100 dark:bg-red-900/30"
+            : "bg-primary-100 dark:bg-primary-900/30"
+        }`}
       >
-        {label}
-      </Text>
-      {description && (
-        <Text style={{ fontSize: 12, color: COLORS.gray500, marginTop: 2 }}>
-          {description}
+        <Ionicons
+          name={icon}
+          size={20}
+          color={
+            danger
+              ? isDark
+                ? "#FCA5A5"
+                : "#DC2626"
+              : isDark
+              ? "#A3CF47"
+              : "#6EA530"
+          }
+        />
+      </View>
+      <View className="flex-1">
+        <Text
+          className={`text-base font-semibold ${
+            danger
+              ? "text-red-600 dark:text-red-400"
+              : "text-gray-900 dark:text-gray-100"
+          }`}
+        >
+          {label}
         </Text>
-      )}
-    </View>
-    {toggle ? (
-      <Switch
-        value={toggleValue}
-        onValueChange={onToggle}
-        trackColor={{ false: COLORS.gray200, true: COLORS.primaryLight }}
-        thumbColor={toggleValue ? COLORS.primary : COLORS.gray400}
-      />
-    ) : !danger ? (
-      <Ionicons name="chevron-forward" size={20} color={COLORS.gray400} />
-    ) : null}
-  </Pressable>
-);
+        {description && (
+          <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {description}
+          </Text>
+        )}
+      </View>
+      {toggle ? (
+        <Switch
+          value={toggleValue}
+          onValueChange={onToggle}
+          trackColor={{
+            false: isDark ? "#475569" : "#E5E7EB",
+            true: isDark ? "#6EA530" : "#A3CF47",
+          }}
+          thumbColor={
+            toggleValue ? (isDark ? "#8BC53F" : "#6EA530") : "#9CA3AF"
+          }
+        />
+      ) : !danger ? (
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={isDark ? "#9CA3AF" : "#9CA3AF"}
+        />
+      ) : null}
+    </Pressable>
+  );
+};
 
 const Divider = () => (
-  <View
-    style={{ height: 1, backgroundColor: COLORS.gray100, marginLeft: 70 }}
-  />
+  <View className="h-px bg-gray-100 dark:bg-gray-700 ml-14" />
 );
 
 const SectionHeader = ({ title }: { title: string }) => (
-  <Text
-    style={{
-      fontSize: 13,
-      fontWeight: "600",
-      color: COLORS.gray500,
-      marginTop: 24,
-      marginBottom: 10,
-      marginLeft: 20,
-      textTransform: "uppercase",
-    }}
-  >
+  <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-6 mb-2.5 mx-5 uppercase tracking-wider">
     {title}
   </Text>
 );
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { isDark, themeMode, setThemeMode } = useAppTheme();
   const [user, setUser] = useState<any>(null);
 
-  // Notification Settings
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [examReminders, setExamReminders] = useState(true);
-  const [doubtAlerts, setDoubtAlerts] = useState(true);
+  const [settings, setSettings] = useState<Settings>({
+    pushNotifications: true,
+    emailNotifications: true,
+    examReminders: true,
+    doubtAlerts: true,
+    autoSave: true,
+    language: "English",
+  });
 
-  // App Settings
-  const [darkMode, setDarkMode] = useState(false);
-  const [autoSave, setAutoSave] = useState(true);
-
-  // Password Modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -140,11 +151,44 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadUser();
+    loadSettings();
   }, []);
 
   const loadUser = async () => {
     const userData = await getUser();
     setUser(userData);
+  };
+
+  const loadSettings = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (saved) {
+        setSettings(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+    }
+  };
+
+  const saveSettings = async (newSettings: Partial<Settings>) => {
+    try {
+      const updated = { ...settings, ...newSettings };
+      setSettings(updated);
+      await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
+
+      // Sync to backend
+      try {
+        await apiFetch("/api/users/me/settings", {
+          method: "PUT",
+          body: JSON.stringify(updated),
+        });
+      } catch (error) {
+        console.log("Backend sync failed, but saved locally", error);
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      Alert.alert("Error", "Failed to save settings");
+    }
   };
 
   const handleChangePassword = async () => {
@@ -167,7 +211,7 @@ export default function SettingsPage() {
 
     setChangingPassword(true);
     try {
-      await apiFetch("/api/auth/change-password", {
+      await apiFetch("/api/users/me/change-password", {
         method: "POST",
         body: JSON.stringify({ currentPassword, newPassword }),
       });
@@ -216,56 +260,50 @@ export default function SettingsPage() {
     );
   };
 
+  const getThemeLabel = () => {
+    switch (themeMode) {
+      case "light":
+        return "Light";
+      case "dark":
+        return "Dark";
+      case "system":
+        return "System Default";
+      default:
+        return "System Default";
+    }
+  };
+
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: "#F9FAFB" }}
+      className="flex-1 bg-gray-50 dark:bg-dark-background"
       edges={["top"]}
     >
       {/* Header */}
-      <View
-        style={{
-          paddingHorizontal: 10,
-          paddingVertical: 20,
-          marginBottom: 10,
-          borderBottomWidth: 1,
-          borderBottomColor: COLORS.gray200,
-          backgroundColor: COLORS.white,
-        }}
-      >
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 12,
-            backgroundColor: "rgba(255,255,255,0.2)",
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 12,
-          }}
-        >
-          <Ionicons name="arrow-back" size={22} color="#000" />
-        </Pressable>
-        <Text style={{ color: "#000", fontSize: 20, fontWeight: "700" }}>
-          Settings
-        </Text>
+      <View className="px-2.5 py-5 mb-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface">
+        <View className="flex-row items-center">
+          <Pressable
+            onPress={() => router.back()}
+            className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 items-center justify-center mr-3"
+          >
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color={isDark ? "#F9FAFB" : "#000"}
+            />
+          </Pressable>
+          <Text className="text-gray-900 dark:text-gray-100 text-xl font-bold">
+            Settings
+          </Text>
+        </View>
       </View>
 
       <ScrollView
-        style={{ flex: 1 }}
+        className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         {/* Account Section */}
         <SectionHeader title="Account" />
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-            ...SHADOWS.sm,
-          }}
-        >
+        <View className="bg-white dark:bg-dark-card rounded-2xl mx-4 overflow-hidden shadow-sm">
           <SettingItem
             icon="person-outline"
             label="Profile Information"
@@ -295,22 +333,14 @@ export default function SettingsPage() {
 
         {/* Notifications Section */}
         <SectionHeader title="Notifications" />
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-            ...SHADOWS.sm,
-          }}
-        >
+        <View className="bg-white dark:bg-dark-card rounded-2xl mx-4 overflow-hidden shadow-sm">
           <SettingItem
             icon="notifications-outline"
             label="Push Notifications"
             description="Receive push notifications"
             toggle
-            toggleValue={pushNotifications}
-            onToggle={setPushNotifications}
+            toggleValue={settings.pushNotifications}
+            onToggle={(value) => saveSettings({ pushNotifications: value })}
           />
           <Divider />
           <SettingItem
@@ -318,8 +348,8 @@ export default function SettingsPage() {
             label="Email Notifications"
             description="Receive email updates"
             toggle
-            toggleValue={emailNotifications}
-            onToggle={setEmailNotifications}
+            toggleValue={settings.emailNotifications}
+            onToggle={(value) => saveSettings({ emailNotifications: value })}
           />
           <Divider />
           <SettingItem
@@ -327,8 +357,8 @@ export default function SettingsPage() {
             label="Exam Reminders"
             description="Get notified about upcoming exams"
             toggle
-            toggleValue={examReminders}
-            onToggle={setExamReminders}
+            toggleValue={settings.examReminders}
+            onToggle={(value) => saveSettings({ examReminders: value })}
           />
           <Divider />
           <SettingItem
@@ -336,29 +366,19 @@ export default function SettingsPage() {
             label="Doubt Alerts"
             description="Notify when students ask doubts"
             toggle
-            toggleValue={doubtAlerts}
-            onToggle={setDoubtAlerts}
+            toggleValue={settings.doubtAlerts}
+            onToggle={(value) => saveSettings({ doubtAlerts: value })}
           />
         </View>
 
         {/* App Settings Section */}
         <SectionHeader title="App Settings" />
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-            ...SHADOWS.sm,
-          }}
-        >
+        <View className="bg-white dark:bg-dark-card rounded-2xl mx-4 overflow-hidden shadow-sm">
           <SettingItem
-            icon="moon-outline"
-            label="Dark Mode"
-            description="Switch to dark theme"
-            toggle
-            toggleValue={darkMode}
-            onToggle={setDarkMode}
+            icon={isDark ? "moon" : "moon-outline"}
+            label="Theme"
+            description={getThemeLabel()}
+            onPress={() => setShowThemeModal(true)}
           />
           <Divider />
           <SettingItem
@@ -366,8 +386,8 @@ export default function SettingsPage() {
             label="Auto Save"
             description="Auto-save drafts while creating papers"
             toggle
-            toggleValue={autoSave}
-            onToggle={setAutoSave}
+            toggleValue={settings.autoSave}
+            onToggle={(value) => saveSettings({ autoSave: value })}
           />
           <Divider />
           <SettingItem
@@ -385,15 +405,7 @@ export default function SettingsPage() {
 
         {/* Support Section */}
         <SectionHeader title="Support" />
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-            ...SHADOWS.sm,
-          }}
-        >
+        <View className="bg-white dark:bg-dark-card rounded-2xl mx-4 overflow-hidden shadow-sm">
           <SettingItem
             icon="help-buoy-outline"
             label="Help Center"
@@ -427,15 +439,7 @@ export default function SettingsPage() {
 
         {/* Danger Zone */}
         <SectionHeader title="Danger Zone" />
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            marginHorizontal: 16,
-            overflow: "hidden",
-            ...SHADOWS.sm,
-          }}
-        >
+        <View className="bg-white dark:bg-dark-card rounded-2xl mx-4 overflow-hidden shadow-sm">
           <SettingItem
             icon="log-out-outline"
             label="Logout"
@@ -452,61 +456,30 @@ export default function SettingsPage() {
         </View>
 
         {/* Version */}
-        <Text
-          style={{
-            textAlign: "center",
-            color: COLORS.gray400,
-            fontSize: 12,
-            marginTop: 24,
-          }}
-        >
+        <Text className="text-center text-gray-400 dark:text-gray-500 text-xs mt-6">
           Abhigyan Gurukul v1.0.0
         </Text>
       </ScrollView>
 
       {/* Password Change Modal */}
       <Modal visible={showPasswordModal} transparent animationType="slide">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "flex-end",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "#fff",
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: 24,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 24,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontWeight: "700",
-                  color: COLORS.gray900,
-                }}
-              >
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white dark:bg-dark-card rounded-t-3xl p-6">
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 Change Password
               </Text>
               <Pressable onPress={() => setShowPasswordModal(false)}>
-                <Ionicons name="close" size={24} color={COLORS.gray400} />
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={isDark ? "#9CA3AF" : "#9CA3AF"}
+                />
               </Pressable>
             </View>
 
-            <View style={{ marginBottom: 16 }}>
-              <Text
-                style={{ fontSize: 14, color: COLORS.gray600, marginBottom: 8 }}
-              >
+            <View className="mb-4">
+              <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 Current Password
               </Text>
               <TextInput
@@ -515,23 +488,14 @@ export default function SettingsPage() {
                   setPasswordForm({ ...passwordForm, currentPassword: text })
                 }
                 placeholder="Enter current password"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
                 secureTextEntry
-                style={{
-                  borderWidth: 1,
-                  borderColor: COLORS.gray200,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  fontSize: 16,
-                  color: COLORS.gray800,
-                }}
+                className="border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3.5 text-base text-gray-800 dark:text-gray-100 bg-white dark:bg-dark-surface"
               />
             </View>
 
-            <View style={{ marginBottom: 16 }}>
-              <Text
-                style={{ fontSize: 14, color: COLORS.gray600, marginBottom: 8 }}
-              >
+            <View className="mb-4">
+              <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 New Password
               </Text>
               <TextInput
@@ -540,23 +504,14 @@ export default function SettingsPage() {
                   setPasswordForm({ ...passwordForm, newPassword: text })
                 }
                 placeholder="Enter new password"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
                 secureTextEntry
-                style={{
-                  borderWidth: 1,
-                  borderColor: COLORS.gray200,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  fontSize: 16,
-                  color: COLORS.gray800,
-                }}
+                className="border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3.5 text-base text-gray-800 dark:text-gray-100 bg-white dark:bg-dark-surface"
               />
             </View>
 
-            <View style={{ marginBottom: 24 }}>
-              <Text
-                style={{ fontSize: 14, color: COLORS.gray600, marginBottom: 8 }}
-              >
+            <View className="mb-6">
+              <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 Confirm Password
               </Text>
               <TextInput
@@ -565,34 +520,119 @@ export default function SettingsPage() {
                   setPasswordForm({ ...passwordForm, confirmPassword: text })
                 }
                 placeholder="Confirm new password"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
                 secureTextEntry
-                style={{
-                  borderWidth: 1,
-                  borderColor: COLORS.gray200,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  fontSize: 16,
-                  color: COLORS.gray800,
-                }}
+                className="border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3.5 text-base text-gray-800 dark:text-gray-100 bg-white dark:bg-dark-surface"
               />
             </View>
 
             <Pressable
               onPress={handleChangePassword}
               disabled={changingPassword}
-              style={{
-                backgroundColor: changingPassword
-                  ? COLORS.gray400
-                  : COLORS.primary,
-                paddingVertical: 16,
-                borderRadius: 12,
-                alignItems: "center",
-              }}
+              className={`py-4 rounded-xl items-center ${
+                changingPassword ? "bg-gray-400" : "bg-primary-600"
+              }`}
             >
-              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>
+              <Text className="text-white text-base font-semibold">
                 {changingPassword ? "Changing..." : "Change Password"}
               </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Theme Selection Modal */}
+      <Modal visible={showThemeModal} transparent animationType="slide">
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white dark:bg-dark-card rounded-t-3xl p-6">
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Choose Theme
+              </Text>
+              <Pressable onPress={() => setShowThemeModal(false)}>
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={isDark ? "#9CA3AF" : "#9CA3AF"}
+                />
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={() => {
+                setThemeMode("light");
+                setShowThemeModal(false);
+              }}
+              className="flex-row items-center py-4 px-4 mb-2 rounded-xl bg-gray-50 dark:bg-gray-700"
+            >
+              <Ionicons
+                name={
+                  themeMode === "light" ? "radio-button-on" : "radio-button-off"
+                }
+                size={24}
+                color={themeMode === "light" ? "#8BC53F" : "#9CA3AF"}
+              />
+              <View className="ml-3 flex-1">
+                <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  Light
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">
+                  Always use light theme
+                </Text>
+              </View>
+              <Ionicons name="sunny" size={24} color="#F59E0B" />
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setThemeMode("dark");
+                setShowThemeModal(false);
+              }}
+              className="flex-row items-center py-4 px-4 mb-2 rounded-xl bg-gray-50 dark:bg-gray-700"
+            >
+              <Ionicons
+                name={
+                  themeMode === "dark" ? "radio-button-on" : "radio-button-off"
+                }
+                size={24}
+                color={themeMode === "dark" ? "#8BC53F" : "#9CA3AF"}
+              />
+              <View className="ml-3 flex-1">
+                <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  Dark
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">
+                  Always use dark theme
+                </Text>
+              </View>
+              <Ionicons name="moon" size={24} color="#6366F1" />
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setThemeMode("system");
+                setShowThemeModal(false);
+              }}
+              className="flex-row items-center py-4 px-4 rounded-xl bg-gray-50 dark:bg-gray-700"
+            >
+              <Ionicons
+                name={
+                  themeMode === "system"
+                    ? "radio-button-on"
+                    : "radio-button-off"
+                }
+                size={24}
+                color={themeMode === "system" ? "#8BC53F" : "#9CA3AF"}
+              />
+              <View className="ml-3 flex-1">
+                <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  System Default
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">
+                  Match your device settings
+                </Text>
+              </View>
+              <Ionicons name="phone-portrait" size={24} color="#8B5CF6" />
             </Pressable>
           </View>
         </View>
