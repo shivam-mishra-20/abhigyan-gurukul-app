@@ -6,6 +6,7 @@ import {
   FilePlus,
   Home,
   LayoutGrid,
+  PenTool,
 } from "lucide-react-native";
 import React from "react";
 
@@ -56,6 +57,15 @@ export default function TeacherLayout() {
         }}
       />
       <Tabs.Screen
+        name="build-exam-enhanced"
+        options={{
+          title: "Build",
+          tabBarIcon: ({ color, size }) => (
+            <PenTool size={size} color={color} strokeWidth={2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="more"
         options={{
           title: "More",
@@ -75,7 +85,6 @@ export default function TeacherLayout() {
       <Tabs.Screen name="announcements" options={{ href: null }} />
       <Tabs.Screen name="student-report" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
-      <Tabs.Screen name="build-exam" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
     </Tabs>
   );

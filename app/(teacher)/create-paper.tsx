@@ -1,364 +1,32 @@
-import { MathText } from "@/components/ui/MathText";
-import { getColors, GRADIENTS, SHADOWS } from "@/constants/colors";
+// Create Paper - Modular Implementation
+import { getColors, GRADIENTS } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
 import { useAppTheme } from "@/lib/context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Print from "expo-print";
 import { useRouter } from "expo-router";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Bookmark,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  FileText,
-} from "lucide-react-native";
+import katex from "katex";
+import { ArrowLeft, ArrowRight, Printer } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Pressable,
-  ScrollView,
-  Share,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Animated, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const STORAGE_KEY = "createPaperFlow_mobile";
-
-// Form Data Interface
-interface Question {
-  _id: string;
-  text: string;
-  type: string;
-  options?: { text: string; isCorrect?: boolean }[];
-  chapter?: string;
-  topic?: string;
-  difficulty?: string;
-}
-
-interface Section {
-  title: string;
-  marksPerQuestion: number;
-  instructions?: string;
-  questionTypeKey?: string;
-  selectedQuestions: Question[];
-}
-
-interface PaperFormData {
-  className: string;
-  subject: string;
-  examTitle: string;
-  totalMarks: number;
-  duration: string;
-  date: string;
-  instituteName: string;
-  board: string;
-  selectedChapters: string[];
-  sections: Section[];
-}
-
-const initialFormData: PaperFormData = {
-  className: "",
-  subject: "",
-  examTitle: "",
-  totalMarks: 0,
-  duration: "",
-  date: "",
-  instituteName: "",
-  board: "",
-  selectedChapters: [],
-  sections: [],
-};
-
-// Configuration
-const CLASSES = [
-  "Class 6",
-  "Class 7",
-  "Class 8",
-  "Class 9",
-  "Class 10",
-  "Class 11",
-  "Class 12",
-];
-const SUBJECTS = [
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "English",
-  "Hindi",
-  "Social Science",
-  "Computer Science",
-  "Accountancy",
-  "Business Studies",
-  "Economics",
-];
-const BOARDS = [
-  { id: "CBSE", name: "CBSE", desc: "Central Board", icon: "school" },
-  { id: "GSEB", name: "GSEB", desc: "Gujarat Board", icon: "business" },
-  { id: "JEE", name: "JEE", desc: "Engineering", icon: "rocket" },
-  { id: "NEET", name: "NEET", desc: "Medical", icon: "medkit" },
-  { id: "Olympiad", name: "Olympiad", desc: "Competitive", icon: "trophy" },
-  { id: "Custom", name: "Custom", desc: "Your Format", icon: "create" },
-];
-
-// Blueprint sections matching cbt-exam
-const BLUEPRINT_SECTIONS: Omit<Section, "selectedQuestions">[] = [
-  {
-    title: "Section A: Objective Type",
-    marksPerQuestion: 1,
-    questionTypeKey: "objective",
-    instructions: "MCQ, Fill in blanks, True/False",
-  },
-  {
-    title: "Section B: Very Short Answer",
-    marksPerQuestion: 2,
-    questionTypeKey: "very_short",
-    instructions: "Answer in 1-2 sentences",
-  },
-  {
-    title: "Section C: Short Answer",
-    marksPerQuestion: 3,
-    questionTypeKey: "short",
-    instructions: "Answer in 50-70 words",
-  },
-  {
-    title: "Section D: Long Answer",
-    marksPerQuestion: 5,
-    questionTypeKey: "long",
-    instructions: "Answer in 100-120 words",
-  },
-  {
-    title: "Section E: Case Study/HOTS",
-    marksPerQuestion: 6,
-    questionTypeKey: "case_study",
-    instructions: "Application based questions",
-  },
-];
-
-const STEPS = [
-  { id: 1, title: "Basic Info", icon: "document-text" },
-  { id: 2, title: "Board", icon: "school" },
-  { id: 3, title: "Chapters", icon: "book" },
-  { id: 4, title: "Questions", icon: "list" },
-  { id: 5, title: "Preview", icon: "eye" },
-];
-
-// Animated chip component
-const AnimatedChip = ({
-  selected,
-  label,
-  onPress,
-  small = false,
-  colors,
-}: {
-  selected: boolean;
-  label: string;
-  onPress: () => void;
-  small?: boolean;
-  colors: ReturnType<typeof getColors>;
-}) => {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const handlePress = () => {
-    Animated.sequence([
-      Animated.timing(scale, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable onPress={handlePress}>
-        <LinearGradient
-          colors={
-            selected ? GRADIENTS.primary : [colors.gray100, colors.gray100]
-          }
-          style={{
-            paddingHorizontal: small ? 12 : 16,
-            paddingVertical: small ? 8 : 10,
-            borderRadius: 20,
-            marginRight: 8,
-            marginBottom: 8,
-            ...SHADOWS.sm,
-          }}
-        >
-          <Text
-            style={{
-              color: selected ? colors.white : colors.gray700,
-              fontWeight: selected ? "600" : "500",
-              fontSize: small ? 13 : 14,
-            }}
-          >
-            {label}
-          </Text>
-        </LinearGradient>
-      </Pressable>
-    </Animated.View>
-  );
-};
-
-// Board Card component
-const BoardCard = ({
-  board,
-  selected,
-  onPress,
-  colors,
-}: {
-  board: (typeof BOARDS)[0];
-  selected: boolean;
-  onPress: () => void;
-  colors: ReturnType<typeof getColors>;
-}) => {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const handlePress = () => {
-    Animated.sequence([
-      Animated.timing(scale, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View
-      style={{ transform: [{ scale }], width: "48%", marginBottom: 12 }}
-    >
-      <Pressable onPress={handlePress}>
-        <View
-          style={{
-            backgroundColor: selected ? colors.primaryBg : colors.surface,
-            borderRadius: 16,
-            padding: 16,
-            borderWidth: 2,
-            borderColor: selected ? colors.primary : colors.border,
-            ...SHADOWS.sm,
-          }}
-        >
-          {selected && (
-            <View
-              style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                backgroundColor: colors.primary,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Check size={14} color="white" strokeWidth={2.5} />
-            </View>
-          )}
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              backgroundColor: selected ? colors.primaryMuted : colors.gray100,
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 8,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: "700",
-                color: selected ? colors.primary : colors.gray500,
-              }}
-            >
-              {board.name.charAt(0)}
-            </Text>
-          </View>
-          <Text
-            style={{ fontSize: 16, fontWeight: "700", color: colors.gray900 }}
-          >
-            {board.name}
-          </Text>
-          <Text style={{ fontSize: 12, color: colors.gray500, marginTop: 2 }}>
-            {board.desc}
-          </Text>
-        </View>
-      </Pressable>
-    </Animated.View>
-  );
-};
-
-// Question Card with MathText
-const QuestionCard = ({
-  question,
-  selected,
-  onToggle,
-  colors,
-}: {
-  question: Question;
-  selected: boolean;
-  onToggle: () => void;
-  colors: ReturnType<typeof getColors>;
-}) => (
-  <Pressable
-    onPress={onToggle}
-    style={{
-      flexDirection: "row",
-      alignItems: "flex-start",
-      backgroundColor: selected ? colors.primaryBg : colors.surface,
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 8,
-      borderWidth: 1,
-      borderColor: selected ? colors.primary : colors.border,
-    }}
-  >
-    <View
-      style={{
-        width: 22,
-        height: 22,
-        borderRadius: 6,
-        backgroundColor: selected ? colors.primary : colors.gray200,
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: 10,
-        marginTop: 2,
-      }}
-    >
-      {selected && <Check size={14} color="white" strokeWidth={2.5} />}
-    </View>
-    <View style={{ flex: 1 }}>
-      <MathText text={question.text} fontSize={14} />
-      {question.topic && (
-        <Text style={{ fontSize: 11, color: colors.gray500, marginTop: 4 }}>
-          📚 {question.topic}
-        </Text>
-      )}
-    </View>
-  </Pressable>
-);
+// Import modular components
+import {
+  BasicInfoStep,
+  BLUEPRINT_SECTIONS,
+  BoardSelectionStep,
+  ChapterSelectionStep,
+  computeQuestionTypeKey,
+  initialFormData,
+  PreviewStep,
+  QuestionSelectionStep,
+  STEPS,
+  STORAGE_KEY,
+  type PaperFormData,
+  type Question,
+} from "@/components/create-paper";
 
 export default function CreatePaper() {
   const router = useRouter();
@@ -366,15 +34,15 @@ export default function CreatePaper() {
   const colors = getColors(isDark);
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [formData, setFormData] = useState<PaperFormData>(initialFormData);
   const [loading, setLoading] = useState(true);
   const [chapters, setChapters] = useState<string[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(
-    new Set([0])
-  );
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const totalSections = BLUEPRINT_SECTIONS.length;
 
   // Load saved state
   useEffect(() => {
@@ -442,7 +110,6 @@ export default function CreatePaper() {
             )}&class=${encodeURIComponent(formData.className)}`
           )) as { chapter: string; count: number }[] | string[];
 
-          // Handle both object array and string array responses
           const chapterNames = res?.length
             ? Array.isArray(res[0])
               ? res
@@ -459,7 +126,6 @@ export default function CreatePaper() {
 
           setChapters(chapterNames as string[]);
         } catch {
-          // Fallback mock chapters
           setChapters([
             `${formData.subject} - Chapter 1`,
             `${formData.subject} - Chapter 2`,
@@ -473,18 +139,20 @@ export default function CreatePaper() {
     }
   }, [formData.subject, formData.className]);
 
-  // Fetch questions when chapters selected
+  // Fetch questions when chapters selected - fetch all in one request
   const fetchQuestions = useCallback(async () => {
     if (formData.selectedChapters.length === 0) return;
     setLoadingQuestions(true);
     try {
+      // Fetch all questions for all chapters in a single batch
       const allQuestions: Question[] = [];
-      for (const chapter of formData.selectedChapters) {
+
+      // Use Promise.all for parallel fetching if multiple chapters
+      const chapterPromises = formData.selectedChapters.map(async (chapter) => {
         const params = new URLSearchParams({
           subject: formData.subject,
           chapter: chapter,
-          limit: "100",
-          page: "1",
+          // limit=0 means fetch all (no limit)
         });
         if (formData.className) params.set("class", formData.className);
         if (formData.board) params.set("board", formData.board);
@@ -492,10 +160,13 @@ export default function CreatePaper() {
         const res = (await apiFetch(
           `/api/exams/questions/for-paper?${params}`
         )) as { items?: Question[]; questions?: Question[] };
-        const list = res?.items || res?.questions || [];
-        allQuestions.push(...list);
-      }
-      // Remove duplicates
+        return res?.items || res?.questions || [];
+      });
+
+      const results = await Promise.all(chapterPromises);
+      results.forEach((list) => allQuestions.push(...list));
+
+      // Remove duplicates efficiently
       const unique = Array.from(
         new Map(allQuestions.map((q) => [q._id, q])).values()
       );
@@ -518,16 +189,6 @@ export default function CreatePaper() {
       fetchQuestions();
     }
   }, [currentStep, fetchQuestions]);
-
-  // Question type mapping
-  const computeQuestionTypeKey = (q: Question): string => {
-    const t = (q.type || "").toLowerCase();
-    if (["mcq", "truefalse", "fill", "integer", "assertionreason"].includes(t))
-      return "objective";
-    if (t === "long") return "long";
-    if (["case_study", "case", "case-study"].includes(t)) return "case_study";
-    return "short";
-  };
 
   const toggleQuestionInSection = (sectionIdx: number, question: Question) => {
     const newSections = [...formData.sections];
@@ -562,14 +223,19 @@ export default function CreatePaper() {
     });
   };
 
-  const toggleSection = (index: number) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
+  const toggleChapter = (chapter: string) => {
+    const exists = formData.selectedChapters.includes(chapter);
+    if (exists) {
+      updateFormData({
+        selectedChapters: formData.selectedChapters.filter(
+          (c) => c !== chapter
+        ),
+      });
     } else {
-      newExpanded.add(index);
+      updateFormData({
+        selectedChapters: [...formData.selectedChapters, chapter],
+      });
     }
-    setExpandedSections(newExpanded);
   };
 
   const canProceed = () => {
@@ -581,18 +247,38 @@ export default function CreatePaper() {
       case 3:
         return formData.selectedChapters.length > 0;
       case 4:
-        return formData.sections.some((s) => s.selectedQuestions.length > 0);
+        return true;
       default:
         return true;
     }
   };
 
   const handleNext = () => {
-    if (currentStep < 5) setCurrentStep(currentStep + 1);
+    if (currentStep === 4) {
+      if (currentSectionIndex < totalSections - 1) {
+        setCurrentSectionIndex(currentSectionIndex + 1);
+      } else {
+        setCurrentStep(5);
+        setCurrentSectionIndex(0);
+      }
+    } else if (currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    if (currentStep === 4) {
+      if (currentSectionIndex > 0) {
+        setCurrentSectionIndex(currentSectionIndex - 1);
+      } else {
+        setCurrentStep(3);
+      }
+    } else if (currentStep === 5) {
+      setCurrentStep(4);
+      setCurrentSectionIndex(totalSections - 1);
+    } else if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   const calculateTotalMarks = () => {
@@ -603,14 +289,323 @@ export default function CreatePaper() {
     }, 0);
   };
 
+  const handlePrint = async () => {
+    try {
+      const currentDate = new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+
+      const totalQs = formData.sections.reduce(
+        (sum, s) => sum + s.selectedQuestions.length,
+        0
+      );
+
+      // Helper function to render math in text using KaTeX
+      const renderMathInText = (text: string): string => {
+        if (!text) return "";
+
+        let result = "";
+        let lastIndex = 0;
+
+        // Handle display math $$...$$
+        const displayMathRegex = /\$\$(.*?)\$\$/g;
+        const displayMatches: {
+          start: number;
+          end: number;
+          content: string;
+        }[] = [];
+        let displayMatch: RegExpExecArray | null;
+        while ((displayMatch = displayMathRegex.exec(text)) !== null) {
+          displayMatches.push({
+            start: displayMatch.index,
+            end: displayMatch.index + displayMatch[0].length,
+            content: displayMatch[1],
+          });
+        }
+
+        // Handle inline math $...$
+        const inlineMathRegex = /\$([^$]+?)\$/g;
+        const inlineMatches: { start: number; end: number; content: string }[] =
+          [];
+        let inlineMatch: RegExpExecArray | null;
+        while ((inlineMatch = inlineMathRegex.exec(text)) !== null) {
+          const isInDisplay = displayMatches.some(
+            (dm) =>
+              inlineMatch!.index >= dm.start && inlineMatch!.index < dm.end
+          );
+          if (!isInDisplay) {
+            inlineMatches.push({
+              start: inlineMatch.index,
+              end: inlineMatch.index + inlineMatch[0].length,
+              content: inlineMatch[1],
+            });
+          }
+        }
+
+        // Combine and sort all matches
+        const allMatches = [
+          ...displayMatches.map((m) => ({ ...m, type: "display" as const })),
+          ...inlineMatches.map((m) => ({ ...m, type: "inline" as const })),
+        ].sort((a, b) => a.start - b.start);
+
+        // Build result with rendered math
+        allMatches.forEach((match) => {
+          // Add text before math
+          if (lastIndex < match.start) {
+            const textPart = text
+              .substring(lastIndex, match.start)
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+            result += textPart;
+          }
+
+          // Render math
+          try {
+            const html = katex.renderToString(match.content, {
+              displayMode: match.type === "display",
+              throwOnError: false,
+              output: "html",
+            });
+            result += html;
+          } catch {
+            // If rendering fails, just show the original text
+            result +=
+              match.type === "display"
+                ? `$$${match.content}$$`
+                : `$${match.content}$`;
+          }
+
+          lastIndex = match.end;
+        });
+
+        // Add remaining text
+        if (lastIndex < text.length) {
+          const textPart = text
+            .substring(lastIndex)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          result += textPart;
+        }
+
+        return (
+          result ||
+          text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+        );
+      };
+
+      // Generate HTML for printing
+      const questionsHTML = formData.sections
+        .filter((s) => s.selectedQuestions.length > 0)
+        .map(
+          (section, sectionIdx) => `
+          <div style="margin-top: ${sectionIdx > 0 ? "32px" : "24px"}; ${
+            sectionIdx > 0
+              ? "border-top: 2px solid #333; padding-top: 20px;"
+              : ""
+          }">
+            <div style="background-color: #f5f5f5; padding: 12px; margin-bottom: 16px; border-left: 4px solid #333;">
+              <h3 style="margin: 0 0 4px 0; font-size: 15px;">${
+                section.title
+              }</h3>
+              ${
+                section.instructions
+                  ? `<p style="margin: 4px 0; font-size: 11px; font-style: italic; color: #666;">(${section.instructions})</p>`
+                  : ""
+              }
+              <p style="margin: 6px 0 0 0; font-size: 11px; font-weight: 600; color: #333;">
+                ${section.marksPerQuestion} mark${
+            section.marksPerQuestion > 1 ? "s" : ""
+          } each × ${section.selectedQuestions.length} questions = ${
+            section.selectedQuestions.length * section.marksPerQuestion
+          } marks
+              </p>
+            </div>
+            ${section.selectedQuestions
+              .map(
+                (q, qIdx) => `
+              <div style="margin-bottom: 20px; padding-left: 8px;">
+                <div style="display: flex; margin-bottom: 8px;">
+                  <span style="font-weight: 700; font-size: 13px; margin-right: 8px; min-width: 35px;">Q${
+                    qIdx + 1
+                  }.</span>
+                  <div style="flex: 1;">
+                    <span style="font-size: 13px; line-height: 1.6;">${renderMathInText(
+                      q.text
+                    )}</span>
+                  </div>
+                  <span style="font-size: 11px; font-weight: 600; color: #666; margin-left: 8px;">[${
+                    section.marksPerQuestion
+                  }]</span>
+                </div>
+                ${
+                  q.options && q.options.length > 0
+                    ? `
+                  <div style="padding-left: 43px; margin-top: 6px;">
+                    ${q.options
+                      .map(
+                        (opt, optIdx) => `
+                      <div style="margin-bottom: 4px;">
+                        <span style="font-size: 12px; margin-right: 6px; font-weight: 600;">${String.fromCharCode(
+                          97 + optIdx
+                        )})</span>
+                        <span style="font-size: 12px;">${renderMathInText(
+                          opt.text
+                        )}</span>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                `
+                    : `
+                  <div style="padding-left: 43px; margin-top: 8px;">
+                    <p style="font-size: 11px; color: #999; font-style: italic; margin: 0;">
+                      Ans: _________________________________________________________________
+                    </p>
+                  </div>
+                `
+                }
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+        `
+        )
+        .join("");
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${formData.examTitle}</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+            <style>
+              @page {
+                margin: 20mm;
+                size: A4;
+              }
+              body {
+                font-family: 'Arial', 'Helvetica', sans-serif;
+                margin: 0;
+                padding: 20px;
+                font-size: 13px;
+                color: #000;
+              }
+              * {
+                box-sizing: border-box;
+              }
+              .katex { font-size: 1em; }
+              .katex-display { margin: 0.5em 0; }
+            </style>
+          </head>
+          <body>
+            <!-- Header -->
+            <div style="border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px;">
+              <h1 style="text-align: center; font-size: 22px; font-weight: 800; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                ${formData.instituteName || "YOUR INSTITUTE NAME"}
+              </h1>
+              <h2 style="text-align: center; font-size: 18px; font-weight: 700; margin: 0; color: #333;">
+                ${formData.examTitle}
+              </h2>
+            </div>
+
+            <!-- Exam Details Table -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ccc;">
+              <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 8px; border-right: 1px solid #ccc;">
+                  <div style="font-size: 11px; color: #666; font-weight: 600;">Class:</div>
+                  <div style="font-size: 13px; font-weight: 700; margin-top: 2px;">${
+                    formData.className
+                  }</div>
+                </td>
+                <td style="padding: 8px; border-right: 1px solid #ccc;">
+                  <div style="font-size: 11px; color: #666; font-weight: 600;">Subject:</div>
+                  <div style="font-size: 13px; font-weight: 700; margin-top: 2px;">${
+                    formData.subject
+                  }</div>
+                </td>
+                <td style="padding: 8px;">
+                  <div style="font-size: 11px; color: #666; font-weight: 600;">Board:</div>
+                  <div style="font-size: 13px; font-weight: 700; margin-top: 2px;">${
+                    formData.board
+                  }</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-right: 1px solid #ccc;">
+                  <div style="font-size: 11px; color: #666; font-weight: 600;">Duration:</div>
+                  <div style="font-size: 13px; font-weight: 700; margin-top: 2px;">${
+                    formData.duration
+                  }</div>
+                </td>
+                <td style="padding: 8px; border-right: 1px solid #ccc;">
+                  <div style="font-size: 11px; color: #666; font-weight: 600;">Total Marks:</div>
+                  <div style="font-size: 13px; font-weight: 700; margin-top: 2px;">${calculateTotalMarks()}</div>
+                </td>
+                <td style="padding: 8px;">
+                  <div style="font-size: 11px; color: #666; font-weight: 600;">Date:</div>
+                  <div style="font-size: 13px; font-weight: 700; margin-top: 2px;">${
+                    formData.date || currentDate
+                  }</div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- General Instructions -->
+            <div style="margin-bottom: 20px;">
+              <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 8px; text-decoration: underline;">General Instructions:</h3>
+              <ul style="padding-left: 20px; margin: 0;">
+                <li style="font-size: 12px; margin-bottom: 4px;">All questions are compulsory.</li>
+                <li style="font-size: 12px; margin-bottom: 4px;">Read each question carefully before answering.</li>
+                <li style="font-size: 12px; margin-bottom: 4px;">Write your answers neatly and legibly.</li>
+                <li style="font-size: 12px; margin-bottom: 4px;">Total questions: ${totalQs} | Total marks: ${calculateTotalMarks()}</li>
+              </ul>
+            </div>
+
+            <!-- Questions -->
+            ${questionsHTML}
+
+            <!-- Footer -->
+            <div style="border-top: 2px solid #000; padding-top: 12px; margin-top: 24px; text-align: center;">
+              <p style="font-size: 12px; font-weight: 700; margin: 0;">*** END OF PAPER ***</p>
+              <p style="font-size: 10px; color: #666; margin: 8px 0 0 0;">All the Best!</p>
+            </div>
+          </body>
+        </html>
+      `;
+
+      // Use expo-print to print
+      await Print.printAsync({
+        html,
+        printerUrl: undefined, // Let the user select printer
+      });
+    } catch (error) {
+      console.error("Error printing:", error);
+      Alert.alert(
+        "Print Error",
+        "Failed to print the question paper. Please try again."
+      );
+    }
+  };
+
   const handleComplete = async () => {
     Alert.alert(
       "🎉 Paper Created!",
       "Your question paper has been created successfully.",
       [
         {
-          text: "Share/Export",
-          onPress: () => handleShare(),
+          text: "Print Paper",
+          onPress: () => handlePrint(),
         },
         {
           text: "Create Another",
@@ -631,56 +626,6 @@ export default function CreatePaper() {
     );
   };
 
-  const handleShare = async () => {
-    const totalQs = formData.sections.reduce(
-      (sum, s) => sum + s.selectedQuestions.length,
-      0
-    );
-    const paperText = `
-📝 ${formData.examTitle}
-🏫 ${formData.instituteName || "Your Institute"}
-📚 ${formData.className} - ${formData.subject}
-⏱️ Duration: ${formData.duration}
-📊 Total Marks: ${calculateTotalMarks()}
-❓ Total Questions: ${totalQs}
-
-${formData.sections
-  .map(
-    (section, idx) => `
-${section.title}
-${section.selectedQuestions
-  .map((q, qIdx) => `${qIdx + 1}. ${q.text}`)
-  .join("\n")}
-`
-  )
-  .join("\n")}
-    `.trim();
-
-    try {
-      await Share.share({
-        message: paperText,
-        title: formData.examTitle,
-      });
-    } catch (error) {
-      console.error("Error sharing:", error);
-    }
-  };
-
-  const toggleChapter = (chapter: string) => {
-    const exists = formData.selectedChapters.includes(chapter);
-    if (exists) {
-      updateFormData({
-        selectedChapters: formData.selectedChapters.filter(
-          (c) => c !== chapter
-        ),
-      });
-    } else {
-      updateFormData({
-        selectedChapters: [...formData.selectedChapters, chapter],
-      });
-    }
-  };
-
   if (loading) {
     return (
       <View
@@ -688,789 +633,69 @@ ${section.selectedQuestions
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: colors.white,
+          backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ color: colors.gray500 }}>Loading...</Text>
       </View>
     );
   }
 
-  // Step 1: Basic Info
-  const renderBasicInfo = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={{ marginBottom: 24 }}>
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "700",
-            color: colors.gray900,
-            marginBottom: 4,
-          }}
-        >
-          Basic Information
-        </Text>
-        <Text style={{ fontSize: 14, color: colors.gray500 }}>
-          Enter exam details to get started
-        </Text>
-      </View>
-
-      {/* Class Selection */}
-      <View style={{ marginBottom: 20 }}>
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "600",
-            color: colors.gray700,
-            marginBottom: 10,
-          }}
-        >
-          Class *
-        </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {CLASSES.map((cls) => (
-            <AnimatedChip
-              key={cls}
-              label={cls}
-              selected={formData.className === cls}
-              onPress={() => updateFormData({ className: cls })}
-              small
-              colors={colors}
-            />
-          ))}
-        </View>
-      </View>
-
-      {/* Subject Selection */}
-      <View style={{ marginBottom: 20 }}>
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "600",
-            color: colors.gray700,
-            marginBottom: 10,
-          }}
-        >
-          Subject *
-        </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {SUBJECTS.map((sub) => (
-            <AnimatedChip
-              key={sub}
-              label={sub}
-              selected={formData.subject === sub}
-              onPress={() => updateFormData({ subject: sub })}
-              small
-              colors={colors}
-            />
-          ))}
-        </View>
-      </View>
-
-      {/* Exam Title */}
-      <View style={{ marginBottom: 20 }}>
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "600",
-            color: colors.gray700,
-            marginBottom: 8,
-          }}
-        >
-          Exam Title *
-        </Text>
-        <TextInput
-          value={formData.examTitle}
-          onChangeText={(t) => updateFormData({ examTitle: t })}
-          placeholder="e.g., Mid-Term Examination 2024"
-          placeholderTextColor={colors.gray400}
-          style={{
-            borderWidth: 2,
-            borderColor: formData.examTitle ? colors.primary : colors.gray200,
-            borderRadius: 12,
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            fontSize: 15,
-            color: colors.gray800,
-            backgroundColor: colors.white,
-          }}
-        />
-      </View>
-
-      {/* Duration & Marks Row */}
-      <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: colors.gray700,
-              marginBottom: 8,
-            }}
-          >
-            Duration
-          </Text>
-          <TextInput
-            value={formData.duration}
-            onChangeText={(t) => updateFormData({ duration: t })}
-            placeholder="3 Hours"
-            placeholderTextColor={colors.gray400}
-            style={{
-              borderWidth: 2,
-              borderColor: colors.gray200,
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              fontSize: 15,
-              color: colors.gray800,
-              backgroundColor: colors.white,
-            }}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: colors.gray700,
-              marginBottom: 8,
-            }}
-          >
-            Total Marks
-          </Text>
-          <TextInput
-            value={formData.totalMarks ? String(formData.totalMarks) : ""}
-            onChangeText={(t) =>
-              updateFormData({ totalMarks: parseInt(t) || 0 })
-            }
-            placeholder="100"
-            keyboardType="numeric"
-            placeholderTextColor={colors.gray400}
-            style={{
-              borderWidth: 2,
-              borderColor: colors.gray200,
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              fontSize: 15,
-              color: colors.gray800,
-              backgroundColor: colors.white,
-            }}
-          />
-        </View>
-      </View>
-
-      {/* Institute Name */}
-      <View style={{ marginBottom: 20 }}>
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "600",
-            color: colors.gray700,
-            marginBottom: 8,
-          }}
-        >
-          Institute Name
-        </Text>
-        <TextInput
-          value={formData.instituteName}
-          onChangeText={(t) => updateFormData({ instituteName: t })}
-          placeholder="Your School/Institute"
-          placeholderTextColor={colors.gray400}
-          style={{
-            borderWidth: 2,
-            borderColor: colors.gray200,
-            borderRadius: 12,
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            fontSize: 15,
-            color: colors.gray800,
-            backgroundColor: colors.white,
-          }}
-        />
-      </View>
-    </ScrollView>
-  );
-
-  // Step 2: Board Selection
-  const renderBoardSelection = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={{ marginBottom: 24 }}>
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "700",
-            color: colors.gray900,
-            marginBottom: 4,
-          }}
-        >
-          Select Exam Board
-        </Text>
-        <Text style={{ fontSize: 14, color: colors.gray500 }}>
-          Choose the board or exam type
-        </Text>
-      </View>
-
-      <View
-        style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-        }}
-      >
-        {BOARDS.map((board) => (
-          <BoardCard
-            key={board.id}
-            board={board}
-            selected={formData.board === board.id}
-            onPress={() => updateFormData({ board: board.id })}
-            colors={colors}
-          />
-        ))}
-      </View>
-    </ScrollView>
-  );
-
-  // Step 3: Chapter Selection
-  const renderChapterSelection = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={{ marginBottom: 24 }}>
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "700",
-            color: colors.gray900,
-            marginBottom: 4,
-          }}
-        >
-          Select Chapters
-        </Text>
-        <Text style={{ fontSize: 14, color: colors.gray500 }}>
-          Choose topics to include ({formData.selectedChapters.length} selected)
-        </Text>
-      </View>
-
-      {chapters.map((chapter, idx) => {
-        const selected = formData.selectedChapters.includes(chapter);
-        return (
-          <Pressable
-            key={`chapter-${idx}`}
-            onPress={() => toggleChapter(chapter)}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: selected ? colors.primaryBg : colors.white,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 10,
-              borderWidth: 2,
-              borderColor: selected ? colors.primary : colors.gray200,
-              ...SHADOWS.sm,
-            }}
-          >
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 8,
-                backgroundColor: selected ? colors.primary : colors.gray200,
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 12,
-              }}
-            >
-              {selected && <Check size={16} color="white" strokeWidth={2.5} />}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontWeight: "600",
-                  color: colors.gray800,
-                }}
-              >
-                {chapter}
-              </Text>
-              <Text
-                style={{ fontSize: 12, color: colors.gray500, marginTop: 2 }}
-              >
-                Chapter {idx + 1}
-              </Text>
-            </View>
-            <Bookmark
-              size={20}
-              color={selected ? colors.primary : colors.gray400}
-              strokeWidth={2}
-              fill={selected ? colors.primary : "transparent"}
-            />
-          </Pressable>
-        );
-      })}
-    </ScrollView>
-  );
-
-  // Step 4: Question Selection with Sections
-  const renderQuestionSelection = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={{ marginBottom: 16 }}>
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "700",
-            color: colors.gray900,
-            marginBottom: 4,
-          }}
-        >
-          Select Questions
-        </Text>
-        <Text style={{ fontSize: 14, color: colors.gray500 }}>
-          Questions are auto-organized by section type
-        </Text>
-      </View>
-
-      {/* Stats bar */}
-      <View
-        style={{
-          flexDirection: "row",
-          backgroundColor: colors.primaryBg,
-          borderRadius: 12,
-          padding: 12,
-          marginBottom: 16,
-        }}
-      >
-        <View style={{ flex: 1, alignItems: "center" }}>
-          <Text
-            style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}
-          >
-            {formData.sections.reduce(
-              (sum, s) => sum + s.selectedQuestions.length,
-              0
-            )}
-          </Text>
-          <Text style={{ fontSize: 11, color: colors.gray600 }}>Questions</Text>
-        </View>
-        <View
-          style={{
-            width: 1,
-            backgroundColor: colors.primary,
-            marginHorizontal: 12,
-            opacity: 0.3,
-          }}
-        />
-        <View style={{ flex: 1, alignItems: "center" }}>
-          <Text
-            style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}
-          >
-            {calculateTotalMarks()}
-          </Text>
-          <Text style={{ fontSize: 11, color: colors.gray600 }}>
-            Total Marks
-          </Text>
-        </View>
-        <View
-          style={{
-            width: 1,
-            backgroundColor: colors.primary,
-            marginHorizontal: 12,
-            opacity: 0.3,
-          }}
-        />
-        <View style={{ flex: 1, alignItems: "center" }}>
-          <Text
-            style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}
-          >
-            {questions.length}
-          </Text>
-          <Text style={{ fontSize: 11, color: colors.gray600 }}>Available</Text>
-        </View>
-      </View>
-
-      {loadingQuestions ? (
-        <View style={{ alignItems: "center", paddingVertical: 40 }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 12, color: colors.gray500 }}>
-            Loading questions...
-          </Text>
-        </View>
-      ) : (
-        formData.sections.map((section, sIdx) => {
-          const sectionQuestions = getFilteredQuestions(sIdx);
-          const isExpanded = expandedSections.has(sIdx);
-
-          return (
-            <View
-              key={sIdx}
-              style={{
-                backgroundColor: colors.white,
-                borderRadius: 16,
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: colors.gray200,
-                overflow: "hidden",
-                ...SHADOWS.sm,
-              }}
-            >
-              {/* Section Header */}
-              <Pressable
-                onPress={() => toggleSection(sIdx)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: 16,
-                  backgroundColor:
-                    section.selectedQuestions.length > 0
-                      ? colors.primaryBg
-                      : colors.gray50,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "700",
-                      color: colors.gray900,
-                    }}
-                  >
-                    {section.title}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: colors.gray500,
-                      marginTop: 2,
-                    }}
-                  >
-                    {section.instructions} • {section.marksPerQuestion} marks
-                    each
-                  </Text>
-                </View>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <View
-                    style={{
-                      backgroundColor:
-                        section.selectedQuestions.length > 0
-                          ? colors.primary
-                          : colors.gray300,
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 12,
-                      marginRight: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: "600",
-                        color: colors.white,
-                      }}
-                    >
-                      {section.selectedQuestions.length} /{" "}
-                      {sectionQuestions.length}
-                    </Text>
-                  </View>
-                  {isExpanded ? (
-                    <ChevronUp
-                      size={20}
-                      color={colors.gray500}
-                      strokeWidth={2}
-                    />
-                  ) : (
-                    <ChevronDown
-                      size={20}
-                      color={colors.gray500}
-                      strokeWidth={2}
-                    />
-                  )}
-                </View>
-              </Pressable>
-
-              {/* Questions List */}
-              {isExpanded && (
-                <View style={{ padding: 12, paddingTop: 0 }}>
-                  {sectionQuestions.length === 0 ? (
-                    <View style={{ alignItems: "center", paddingVertical: 20 }}>
-                      <FileText
-                        size={32}
-                        color={colors.gray300}
-                        strokeWidth={1.5}
-                      />
-                      <Text style={{ color: colors.gray500, marginTop: 8 }}>
-                        No questions available for this section
-                      </Text>
-                    </View>
-                  ) : (
-                    <ScrollView style={{ maxHeight: 300 }}>
-                      {sectionQuestions.map((q) => (
-                        <QuestionCard
-                          key={q._id}
-                          question={q}
-                          selected={isQuestionSelected(q._id, sIdx)}
-                          onToggle={() => toggleQuestionInSection(sIdx, q)}
-                          colors={colors}
-                        />
-                      ))}
-                    </ScrollView>
-                  )}
-                </View>
-              )}
-            </View>
-          );
-        })
-      )}
-    </ScrollView>
-  );
-
-  // Step 5: Preview
-  const renderPreview = () => {
-    const totalQs = formData.sections.reduce(
-      (sum, s) => sum + s.selectedQuestions.length,
-      0
-    );
-
-    return (
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ marginBottom: 16 }}>
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: "700",
-              color: colors.gray900,
-              marginBottom: 4,
-            }}
-          >
-            Paper Preview
-          </Text>
-          <Text style={{ fontSize: 14, color: colors.gray500 }}>
-            Review your question paper
-          </Text>
-        </View>
-
-        {/* Paper Header Card */}
-        <View
-          style={{
-            backgroundColor: colors.white,
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 16,
-            borderWidth: 2,
-            borderColor: colors.primaryMuted,
-            ...SHADOWS.md,
-          }}
-        >
-          <Text
-            style={{
-              textAlign: "center",
-              fontSize: 18,
-              fontWeight: "700",
-              color: colors.gray900,
-            }}
-          >
-            {formData.instituteName || "Your Institute"}
-          </Text>
-          <Text
-            style={{
-              textAlign: "center",
-              fontSize: 16,
-              color: colors.gray600,
-              marginTop: 4,
-            }}
-          >
-            {formData.examTitle}
-          </Text>
-
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              borderTopWidth: 1,
-              borderBottomWidth: 1,
-              borderColor: colors.gray200,
-              paddingVertical: 12,
-              marginTop: 16,
-            }}
-          >
-            <Text style={{ color: colors.gray600 }}>{formData.className}</Text>
-            <Text style={{ color: colors.gray600 }}>{formData.subject}</Text>
-            <Text style={{ color: colors.gray600 }}>{formData.duration}</Text>
-          </View>
-
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-around",
-              marginTop: 16,
-            }}
-          >
-            <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 11, color: colors.gray500 }}>Board</Text>
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontWeight: "600",
-                  color: colors.gray900,
-                }}
-              >
-                {formData.board}
-              </Text>
-            </View>
-            <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 11, color: colors.gray500 }}>
-                Total Marks
-              </Text>
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontWeight: "600",
-                  color: colors.primary,
-                }}
-              >
-                {calculateTotalMarks()}
-              </Text>
-            </View>
-            <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 11, color: colors.gray500 }}>
-                Questions
-              </Text>
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontWeight: "600",
-                  color: colors.gray900,
-                }}
-              >
-                {totalQs}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Sections Summary */}
-        {formData.sections
-          .filter((s) => s.selectedQuestions.length > 0)
-          .map((section, idx) => (
-            <View
-              key={idx}
-              style={{
-                backgroundColor: colors.white,
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 12,
-                borderLeftWidth: 4,
-                borderLeftColor: colors.primary,
-                ...SHADOWS.sm,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 8,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: "700",
-                    color: colors.gray900,
-                  }}
-                >
-                  {section.title}
-                </Text>
-                <View
-                  style={{
-                    backgroundColor: colors.primaryBg,
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 8,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: "600",
-                      color: colors.primary,
-                    }}
-                  >
-                    {section.selectedQuestions.length} ×{" "}
-                    {section.marksPerQuestion} ={" "}
-                    {section.selectedQuestions.length *
-                      section.marksPerQuestion}{" "}
-                    marks
-                  </Text>
-                </View>
-              </View>
-              {section.selectedQuestions.slice(0, 2).map((q, qIdx) => (
-                <View
-                  key={q._id}
-                  style={{ marginTop: 8, flexDirection: "row" }}
-                >
-                  <Text style={{ fontSize: 13, color: colors.gray600 }}>
-                    {qIdx + 1}.{" "}
-                  </Text>
-                  <View style={{ flex: 1 }}>
-                    <MathText
-                      text={q.text}
-                      fontSize={13}
-                      style={{ color: colors.gray600 }}
-                    />
-                  </View>
-                </View>
-              ))}
-              {section.selectedQuestions.length > 2 && (
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: colors.gray500,
-                    marginTop: 8,
-                    fontStyle: "italic",
-                  }}
-                >
-                  + {section.selectedQuestions.length - 2} more questions
-                </Text>
-              )}
-            </View>
-          ))}
-
-        {/* Ready Message */}
-        <View
-          style={{
-            backgroundColor: colors.primaryBg,
-            borderRadius: 12,
-            padding: 16,
-            marginTop: 8,
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
-          <CheckCircle2 size={24} color={colors.primary} strokeWidth={2} />
-          <Text style={{ marginLeft: 12, color: colors.primaryDark, flex: 1 }}>
-            Paper is ready! Click Complete to save and export.
-          </Text>
-        </View>
-      </ScrollView>
-    );
-  };
-
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return renderBasicInfo();
+        return (
+          <BasicInfoStep
+            formData={formData}
+            updateFormData={updateFormData}
+            colors={colors}
+          />
+        );
       case 2:
-        return renderBoardSelection();
+        return (
+          <BoardSelectionStep
+            formData={formData}
+            updateFormData={updateFormData}
+            colors={colors}
+          />
+        );
       case 3:
-        return renderChapterSelection();
+        return (
+          <ChapterSelectionStep
+            formData={formData}
+            chapters={chapters}
+            toggleChapter={toggleChapter}
+            colors={colors}
+          />
+        );
       case 4:
-        return renderQuestionSelection();
+        return (
+          <QuestionSelectionStep
+            formData={formData}
+            currentSectionIndex={currentSectionIndex}
+            setCurrentSectionIndex={setCurrentSectionIndex}
+            questions={questions}
+            loadingQuestions={loadingQuestions}
+            getFilteredQuestions={getFilteredQuestions}
+            isQuestionSelected={isQuestionSelected}
+            toggleQuestionInSection={toggleQuestionInSection}
+            calculateTotalMarks={calculateTotalMarks}
+            colors={colors}
+          />
+        );
       case 5:
-        return renderPreview();
+        return (
+          <PreviewStep
+            formData={formData}
+            calculateTotalMarks={calculateTotalMarks}
+            colors={colors}
+          />
+        );
       default:
         return null;
     }
   };
 
-  // Use tab bar color (green for light, indigo for dark)
   const headerGradient = isDark
     ? ["#6366F1", "#4F46E5"]
     : ["#059669", "#047857"];
@@ -1512,7 +737,13 @@ ${section.selectedQuestions
               Create Question Paper
             </Text>
             <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 13 }}>
-              Step {currentStep} of 5: {STEPS[currentStep - 1].title}
+              {currentStep === 4
+                ? `Section ${currentSectionIndex + 1} of ${totalSections}: ${
+                    formData.sections[currentSectionIndex]?.title?.split(
+                      ": "
+                    )[1] || "Questions"
+                  }`
+                : `Step ${currentStep} of 5: ${STEPS[currentStep - 1].title}`}
             </Text>
           </View>
         </View>
@@ -1529,7 +760,7 @@ ${section.selectedQuestions
           flexDirection: "row",
           paddingHorizontal: 20,
           paddingVertical: 16,
-          backgroundColor: colors.white,
+          backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.gray100,
           gap: 12,
@@ -1606,11 +837,11 @@ ${section.selectedQuestions
                 justifyContent: "center",
               }}
             >
-              <CheckCircle2 size={18} color="white" strokeWidth={2.5} />
+              <Printer size={18} color="white" strokeWidth={2.5} />
               <Text
                 style={{ fontWeight: "600", color: "white", marginLeft: 8 }}
               >
-                Complete
+                Complete & Print
               </Text>
             </LinearGradient>
           </Pressable>
