@@ -175,6 +175,14 @@ export const AuthService = {
     const user = await getStoredUser();
     return !!user;
   },
+
+  /**
+   * Get all students (for teachers/admins)
+   */
+  async getStudents(): Promise<any[]> {
+    const response = await api.get<{ success: boolean; data: any[] }>('/api/teacher/students');
+    return response.data || [];
+  },
 };
 
 export default AuthService;

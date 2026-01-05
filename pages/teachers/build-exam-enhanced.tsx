@@ -1,8 +1,3 @@
-/**
- * Build Exam - Enhanced Flow with Student Assignment
- * Professional multi-step exam creation with modular components
- */
-
 import { getColors } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
 import { useAppTheme } from "@/lib/context";

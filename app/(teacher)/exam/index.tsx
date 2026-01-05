@@ -537,7 +537,7 @@ export default function TeacherExams() {
       fetchExams();
       // Navigate to build exam screen
       router.push(
-        `/(teacher)/build-exam-enhanced?examId=${newExam._id}` as any
+        `/(teacher)/more/build-exam-enhanced?examId=${newExam._id}` as any
       );
     } catch {
       Alert.alert("Error", "Failed to create exam");
@@ -836,7 +836,7 @@ export default function TeacherExams() {
               }}
               onBuild={() =>
                 router.push(
-                  `/(teacher)/build-exam-enhanced?examId=${exam._id}` as any
+                  `/(teacher)/more/build-exam-enhanced?examId=${exam._id}` as any
                 )
               }
             />

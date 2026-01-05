@@ -2,11 +2,11 @@ import { AnimatedTabBar } from "@/components/animated-tab-bar";
 import { useAppTheme } from "@/lib/context";
 import { Tabs } from "expo-router";
 import {
+  CircleHelp,
   ClipboardCheck,
   FilePlus,
   Home,
   LayoutGrid,
-  PenTool,
 } from "lucide-react-native";
 import React from "react";
 
@@ -28,7 +28,7 @@ export default function TeacherLayout() {
         headerShown: false,
       }}
     >
-      {/* Main Tabs */}
+      {/* Main Tabs - Using folder structure */}
       <Tabs.Screen
         name="index"
         options={{
@@ -39,16 +39,7 @@ export default function TeacherLayout() {
         }}
       />
       <Tabs.Screen
-        name="create-paper"
-        options={{
-          title: "Create",
-          tabBarIcon: ({ color, size }) => (
-            <FilePlus size={size} color={color} strokeWidth={2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="exams"
+        name="exam"
         options={{
           title: "Exams",
           tabBarIcon: ({ color, size }) => (
@@ -57,11 +48,20 @@ export default function TeacherLayout() {
         }}
       />
       <Tabs.Screen
-        name="build-exam-enhanced"
+        name="create"
         options={{
-          title: "Build",
+          title: "Create",
           tabBarIcon: ({ color, size }) => (
-            <PenTool size={size} color={color} strokeWidth={2} />
+            <FilePlus size={size} color={color} strokeWidth={2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="doubts"
+        options={{
+          title: "Doubts",
+          tabBarIcon: ({ color, size }) => (
+            <CircleHelp size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -74,18 +74,6 @@ export default function TeacherLayout() {
           ),
         }}
       />
-
-      {/* Hidden screens - accessible via navigation from More or Home */}
-      <Tabs.Screen name="profile" options={{ href: null }} />
-      <Tabs.Screen name="reviews" options={{ href: null }} />
-      <Tabs.Screen name="batches" options={{ href: null }} />
-      <Tabs.Screen name="students" options={{ href: null }} />
-      <Tabs.Screen name="performance" options={{ href: null }} />
-      <Tabs.Screen name="doubts" options={{ href: null }} />
-      <Tabs.Screen name="announcements" options={{ href: null }} />
-      <Tabs.Screen name="student-report" options={{ href: null }} />
-      <Tabs.Screen name="settings" options={{ href: null }} />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
     </Tabs>
   );
 }

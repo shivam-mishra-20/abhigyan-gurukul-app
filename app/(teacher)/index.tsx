@@ -1,35 +1,37 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback } from "react";
 import {
-  Dimensions,
+  BarChart3,
+  Bell,
+  BookOpen,
+  CheckCircle,
+  ClipboardCheck,
+  Library,
+  PlusCircle,
+  Users
+} from "lucide-react-native";
+import React, { useCallback, useEffect } from "react";
+import {
+  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
-import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Hooks
-import { useAppTheme, useToast } from "@/lib/context";
+import { useToast } from "@/lib/context";
 import { useDashboard } from "@/lib/hooks";
-
-// Components
-import { LoadingScreen } from "@/components/shared";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-// ============================================================================
-// Types
-// ============================================================================
 
 interface StatItem {
   id: string;
   key: "totalExams" | "pendingReviews" | "totalStudents" | "totalPapers";
   title: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: any;
+  iconColor: string;
+  bgColor: string;
   route: string;
 }
 
@@ -37,42 +39,48 @@ interface FeaturedAction {
   id: string;
   title: string;
   subtitle: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: any;
+  iconColor: string;
+  bgColor: string;
   route: string;
 }
-
-// ============================================================================
-// Constants
-// ============================================================================
 
 const STAT_ITEMS: StatItem[] = [
   {
     id: "exams",
     key: "totalExams",
     title: "Total Exams",
-    icon: "document-text",
-    route: "/(teacher)/exams",
+    icon: BookOpen,
+    iconColor: "#10b981",
+    bgColor: "#d1fae5",
+    route: "/(teacher)/exam",
   },
   {
     id: "reviews",
     key: "pendingReviews",
     title: "Pending Reviews",
-    icon: "time",
-    route: "/(teacher)/reviews",
+    icon: ClipboardCheck,
+    iconColor: "#f59e0b",
+    bgColor: "#fef3c7",
+    route: "/(teacher)/more/reviews",
   },
   {
     id: "students",
     key: "totalStudents",
     title: "Total Students",
-    icon: "people",
+    icon: Users,
+    iconColor: "#3b82f6",
+    bgColor: "#dbeafe",
     route: "/(teacher)/students",
   },
   {
     id: "papers",
     key: "totalPapers",
     title: "Questions",
-    icon: "library",
-    route: "/(teacher)/create-paper",
+    icon: Library,
+    iconColor: "#9333ea",
+    bgColor: "#e9d5ff",
+    route: "/(teacher)/create",
   },
 ];
 
@@ -81,50 +89,47 @@ const FEATURED_ACTIONS: FeaturedAction[] = [
     id: "create-exam",
     title: "Create New Exam",
     subtitle: "Build exam with AI assistance",
-    icon: "add-circle",
-    route: "/(teacher)/create-paper",
+    icon: PlusCircle,
+    iconColor: "#10b981",
+    bgColor: "#d1fae5",
+    route: "/(teacher)/create",
   },
   {
     id: "review-submissions",
     title: "Review Submissions",
     subtitle: "Grade pending student answers",
-    icon: "checkmark-done-circle",
-    route: "/(teacher)/reviews",
+    icon: CheckCircle,
+    iconColor: "#3b82f6",
+    bgColor: "#dbeafe",
+    route: "/(teacher)/more/reviews",
   },
   {
     id: "student-performance",
     title: "Student Performance",
     subtitle: "View analytics & insights",
-    icon: "bar-chart",
-    route: "/(teacher)/performance",
+    icon: BarChart3,
+    iconColor: "#9333ea",
+    bgColor: "#e9d5ff",
+    route: "/(teacher)/more/performance",
   },
 ];
-
-// ============================================================================
-// Main Component
-// ============================================================================
 
 export default function TeacherHome() {
   const router = useRouter();
   const toast = useToast();
-  const { isDark } = useAppTheme();
 
-  // Use our custom dashboard hook for data fetching
   const { stats, loading, refreshing, refetch, error } = useDashboard();
 
-  // Handle refresh
   const onRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
 
-  // Show error toast if there's an error
-  React.useEffect(() => {
+  useEffect(() => {
     if (error) {
       toast.error("Failed to load dashboard data");
     }
   }, [error, toast]);
 
-  // Navigate to route
   const navigateTo = useCallback(
     (route: string) => {
       router.push(route as any);
@@ -132,7 +137,6 @@ export default function TeacherHome() {
     [router]
   );
 
-  // Get current time greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good Morning";
@@ -140,147 +144,280 @@ export default function TeacherHome() {
     return "Good Evening";
   };
 
-  // Initial loading screen
   if (loading && !stats) {
-    return <LoadingScreen message="Loading dashboard..." />;
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#10b981" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <SafeAreaView
-      className="bg-white dark:bg-dark-background h-screen"
-      edges={["top"]}
-    >
+    <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#8BC53F"]}
-            tintColor="#8BC53F"
+            colors={["#10b981"]}
+            tintColor="#10b981"
           />
         }
       >
         {/* Header */}
-        <View className="px-2.5 py-5 mb-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface">
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <Text className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-              {getGreeting()}
-            </Text>
-            <Text className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-              {stats?.teacherName || "Teacher"}
-            </Text>
-          </Animated.View>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.greetingText}>{getGreeting()}</Text>
+              <Text style={styles.teacherName}>
+                {stats?.teacherName || "Teacher"}
+              </Text>
+            </View>
 
-          {/* Notification Icon */}
-          <Pressable
-            onPress={() => navigateTo("/(teacher)/notifications")}
-            className="absolute top-8 right-4 w-11 h-11 rounded-full bg-gray-100 dark:bg-gray-700 items-center justify-center"
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={24}
-              color={isDark ? "#F9FAFB" : "#374151"}
-            />
-            {stats?.pendingReviews ? (
-              <View className="absolute top-1.5 right-1.5 min-w-[16px] h-4 rounded-full bg-primary-500 items-center justify-center px-1 border-2 border-white dark:border-dark-surface">
-                <Text className="text-[9px] font-bold text-white">
-                  {stats.pendingReviews}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
+            {/* Notification Icon */}
+            <Pressable
+              onPress={() => navigateTo("/(teacher)/more/notifications")}
+              style={styles.notificationButton}
+            >
+              <Bell size={24} color="white" strokeWidth={2.5} />
+              {stats?.pendingReviews ? (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {stats.pendingReviews}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+          </View>
         </View>
 
         {/* Stats Grid */}
-        <Animated.View
-          entering={FadeInDown.delay(200).springify()}
-          className="px-4 mb-6"
-        >
-          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            Overview
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {STAT_ITEMS.map((item, index) => (
-              <Animated.View
-                key={item.id}
-                entering={FadeInRight.delay(300 + index * 100).springify()}
-                style={{
-                  width: (SCREEN_WIDTH - 32 - 8) / 2,
-                }}
-              >
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Overview</Text>
+          <View style={styles.statsGrid}>
+            {STAT_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
                 <Pressable
+                  key={item.id}
                   onPress={() => navigateTo(item.route)}
-                  className="bg-white dark:bg-dark-card rounded-2xl p-4 min-h-[110px] border border-gray-200 dark:border-gray-700"
+                  style={styles.statCard}
                 >
-                  <View className="w-10 h-10 rounded-xl items-center justify-center mb-3 bg-primary-100 dark:bg-primary-900/30">
-                    <Ionicons
-                      name={item.icon}
-                      size={20}
-                      color={isDark ? "#A3CF47" : "#6EA530"}
-                    />
+                  <View
+                    style={[styles.statIconContainer, { backgroundColor: item.bgColor }]}
+                  >
+                    <Icon size={24} color={item.iconColor} strokeWidth={2.5} />
                   </View>
-                  <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5">
+                  <Text style={styles.statValue}>
                     {loading ? "..." : stats?.[item.key] ?? 0}
                   </Text>
-                  <Text className="text-xs text-gray-600 dark:text-gray-400">
-                    {item.title}
-                  </Text>
+                  <Text style={styles.statTitle}>{item.title}</Text>
                 </Pressable>
-              </Animated.View>
-            ))}
+              );
+            })}
           </View>
-        </Animated.View>
+        </View>
 
         {/* Quick Actions */}
-        <Animated.View
-          entering={FadeInDown.delay(400).springify()}
-          className="px-4"
-        >
-          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            Quick Actions
-          </Text>
-
-          <View className="bg-white dark:bg-dark-card rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {FEATURED_ACTIONS.map((action, index) => (
-              <Animated.View
-                key={action.id}
-                entering={FadeInRight.delay(500 + index * 100).springify()}
-              >
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsContainer}>
+            {FEATURED_ACTIONS.map((action, index) => {
+              const Icon = action.icon;
+              return (
                 <Pressable
+                  key={action.id}
                   onPress={() => navigateTo(action.route)}
-                  className={`flex-row items-center p-4 ${
-                    index < FEATURED_ACTIONS.length - 1
-                      ? "border-b border-gray-100 dark:border-gray-700"
-                      : ""
-                  }`}
+                  style={[
+                    styles.actionCard,
+                    index < FEATURED_ACTIONS.length - 1 && styles.actionCardBorder,
+                  ]}
                 >
-                  <View className="w-11 h-11 rounded-xl items-center justify-center mr-3 bg-primary-100 dark:bg-primary-900/30">
-                    <Ionicons
-                      name={action.icon}
-                      size={22}
-                      color={isDark ? "#A3CF47" : "#6EA530"}
-                    />
+                  <View
+                    style={[
+                      styles.actionIconContainer,
+                      { backgroundColor: action.bgColor },
+                    ]}
+                  >
+                    <Icon size={24} color={action.iconColor} strokeWidth={2.5} />
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-0.5">
-                      {action.title}
-                    </Text>
-                    <Text className="text-xs text-gray-600 dark:text-gray-400">
-                      {action.subtitle}
-                    </Text>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={styles.actionTitle}>{action.title}</Text>
+                    <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
                   </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color={isDark ? "#9CA3AF" : "#6B7280"}
-                  />
+                  <Text style={styles.actionArrow}>→</Text>
                 </Pressable>
-              </Animated.View>
-            ))}
+              );
+            })}
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    color: "#6b7280",
+    fontSize: 14,
+  },
+  header: {
+    paddingTop: 24,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    backgroundColor: "#10b981",
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  greetingText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  teacherName: {
+    color: "white",
+    fontSize: 28,
+    fontWeight: "bold",
+  },
+  notificationButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#ef4444",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: "#10b981",
+  },
+  notificationBadgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  section: {
+    paddingHorizontal: 16,
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1f2937",
+    marginBottom: 16,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  statCard: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    width: "48%",
+    minHeight: 140,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  statValue: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#1f2937",
+    marginBottom: 4,
+  },
+  statTitle: {
+    fontSize: 13,
+    color: "#6b7280",
+  },
+  actionsContainer: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    overflow: "hidden",
+  },
+  actionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  actionCardBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  actionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  actionTextContainer: {
+    flex: 1,
+  },
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginBottom: 2,
+  },
+  actionSubtitle: {
+    fontSize: 13,
+    color: "#6b7280",
+  },
+  actionArrow: {
+    fontSize: 24,
+    color: "#9ca3af",
+    fontWeight: "300",
+  },
+});

@@ -1,10 +1,9 @@
 import { ErrorBoundary } from "@/components/shared";
-import { ThemeProvider, useAppTheme, ToastProvider } from "@/lib/context";
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider as NavigationThemeProvider,
-} from "@react-navigation/native";
+  ThemeProvider as AppThemeProvider,
+  ToastProvider,
+  useAppTheme,
+} from "@/lib/context";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "nativewind";
@@ -28,26 +27,24 @@ function RootLayoutContent() {
   return (
     <>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <NavigationThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-        <ToastProvider>
-          <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
-            <Stack.Screen name="splash" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="(student)" options={{ headerShown: false }} />
-            <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
-            <Stack.Screen name="(guest)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal"
-              options={{
-                presentation: "modal",
-                title: "Modal",
-                headerShown: true,
-              }}
-            />
-          </Stack>
-        </ToastProvider>
-      </NavigationThemeProvider>
+      <ToastProvider>
+        <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
+          <Stack.Screen name="splash" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="(student)" options={{ headerShown: false }} />
+          <Stack.Screen name="(teacher)" options={{ headerShown: false }} />
+          <Stack.Screen name="(guest)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="modal"
+            options={{
+              presentation: "modal",
+              title: "Modal",
+              headerShown: true,
+            }}
+          />
+        </Stack>
+      </ToastProvider>
     </>
   );
 }
@@ -55,9 +52,9 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
+      <AppThemeProvider>
         <RootLayoutContent />
-      </ThemeProvider>
+      </AppThemeProvider>
     </ErrorBoundary>
   );
 }

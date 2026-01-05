@@ -1,13 +1,13 @@
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  Animated,
-  Dimensions,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    Dimensions,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
@@ -41,7 +41,6 @@ export function AnimatedTabBar({
         "batches",
         "students",
         "performance",
-        "doubts",
         "announcements",
         "student-report",
         "settings",
