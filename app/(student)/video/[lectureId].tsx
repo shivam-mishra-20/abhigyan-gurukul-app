@@ -1,129 +1,223 @@
-import { addBookmark, getCourseBookmarks, getVideoPosition, removeBookmarkByLecture, saveVideoPosition, updateCourseProgress } from "@/lib/enhancedApi";
+import { getCourseDetail, getVideoPosition, saveVideoPosition, updateCourseProgress } from "@/lib/enhancedApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Pressable,
-    StatusBar,
-    Text,
-    View,
+  ActivityIndicator,
+  BackHandler,
+  Image,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import YoutubePlayer, { YoutubeIframeRef } from "react-native-youtube-iframe";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+interface Lecture {
+  title: string;
+  videoUrl?: string;
+  youtubeVideoId?: string;
+  order: number;
+  duration?: number;
+  youtubeMeta?: {
+    durationSec: number;
+    thumbnail: string;
+    title: string;
+  };
+}
 
-const THEME = {
-  primary: "#059669",
-  primaryLight: "#10b981",
-  dark: "#1f2937",
-};
+interface Module {
+  title: string;
+  description?: string;
+  lectures: Lecture[];
+}
 
-const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
-
-// Extract YouTube video ID from various URL formats
+// Extract YouTube video ID
 function extractYouTubeId(url: string): string | null {
   if (!url) return null;
-  
-  // Already a video ID
   if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
-  
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
     /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
   ];
-  
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) return match[1];
   }
-  
   return null;
 }
 
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 export default function VideoPlayerScreen() {
-  const { courseId, lectureId, videoUrl, title } = useLocalSearchParams<{
+  const { courseId, lectureId, videoUrl, title, moduleIndex } = useLocalSearchParams<{
     courseId: string;
     lectureId: string;
     videoUrl: string;
     title: string;
+    moduleIndex: string;
   }>();
   
   const router = useRouter();
+  const navigation = useNavigation();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const playerRef = useRef<YoutubeIframeRef>(null);
   
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState(1);
-  const [showControls, setShowControls] = useState(true);
-  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [bookmarkId, setBookmarkId] = useState<string | null>(null);
   const [initialSeek, setInitialSeek] = useState<number | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [hasMarkedComplete, setHasMarkedComplete] = useState(false);
+  
+  // Course data
+  const [currentModule, setCurrentModule] = useState<Module | null>(null);
+  const [courseTitle, setCourseTitle] = useState("");
+  const [currentLectureIndex, setCurrentLectureIndex] = useState(0);
   
   const videoId = extractYouTubeId(videoUrl || "");
-  
-  // Load saved position and bookmark status
-  useEffect(() => {
-    const loadData = async () => {
-      if (!courseId || !lectureId) return;
-      
-      try {
-        const [positionData, bookmarks] = await Promise.all([
-          getVideoPosition(courseId, lectureId).catch(() => ({ position: 0
 
- })),
-          getCourseBookmarks(courseId).catch(() => []),
-        ]);
-        
-        if (positionData.position > 0) {
-          setInitialSeek(positionData.position);
-        }
-        
-        const bookmark = bookmarks.find(b => b.lectureId === lectureId);
-        if (bookmark) {
-          setIsBookmarked(true);
-          setBookmarkId(bookmark._id);
-        }
-      } catch (error) {
-        console.error("Error loading video data:", error);
+  // Handle orientation and BackHandler
+  useEffect(() => {
+    const handleBackPress = () => {
+      if (isFullscreen) {
+        setIsFullscreen(false);
+        return true;
       }
+      return false;
     };
-    
-    loadData();
-  }, [courseId, lectureId]);
-  
-  // Save position periodically
+
+    if (isFullscreen) {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+      return () => backHandler.remove();
+    } else {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    }
+  }, [isFullscreen]);
+
+  // Handle Tab Bar & Header Visibility with cleanup and delay for smoother transitions
   useEffect(() => {
-    const interval = setInterval(async () => {
-      if (playing && currentTime > 0 && courseId && lectureId) {
-        await saveVideoPosition(courseId, lectureId, Math.floor(currentTime)).catch(() => {});
-      }
-    }, 10000); // Save every 10 seconds
+    let timeout: any;
     
-    return () => clearInterval(interval);
-  }, [playing, currentTime, courseId, lectureId]);
+    if (isFullscreen) {
+      // Hide immediately when entering fullscreen
+      navigation.setOptions({
+        tabBarStyle: { display: "none" },
+        headerShown: false,
+      });
+    } else {
+      // Delay showing tabs when exiting fullscreen to avoid layout glitches during rotation
+      timeout = setTimeout(() => {
+        navigation.setOptions({
+          tabBarStyle: { display: "flex" },
+          headerShown: false,
+        });
+      }, 1000);
+    }
+    
+    // cleanup
+    return () => {
+      clearTimeout(timeout);
+      // Ensure tabs are visible when unmounting this component
+      navigation.setOptions({
+        tabBarStyle: { display: "flex" },
+        headerShown: false,
+      });
+    };
+  }, [isFullscreen, navigation]);
   
-  // Hide controls after delay
+  // Autohide controls
   useEffect(() => {
-    if (showControls && playing) {
+    if (playing && showControls && !isSeeking) {
       const timeout = setTimeout(() => setShowControls(false), 4000);
       return () => clearTimeout(timeout);
     }
-  }, [showControls, playing]);
-  
+  }, [playing, showControls, isSeeking]);
+
+  // Load data
+  useEffect(() => {
+    const loadData = async () => {
+      if (!courseId || !lectureId) return;
+      try {
+        const [positionData, courseData] = await Promise.all([
+          getVideoPosition(courseId, lectureId).catch(() => ({ position: 0 })),
+          getCourseDetail(courseId).catch(() => null),
+        ]);
+        
+        if (positionData.position > 0) setInitialSeek(positionData.position);
+        if (courseData) {
+          setCourseTitle(courseData.title);
+          const modIdx = moduleIndex ? parseInt(moduleIndex) : 0;
+          if (courseData.syllabus && courseData.syllabus[modIdx]) {
+            setCurrentModule(courseData.syllabus[modIdx]);
+            // Find current lecture
+            const lecIdx = courseData.syllabus[modIdx].lectures.findIndex(
+              (l: Lecture, i: number) => i.toString() === lectureId || l.youtubeVideoId === videoId || extractYouTubeId(l.videoUrl || "") === videoId
+            );
+            if (lecIdx >= 0) setCurrentLectureIndex(lecIdx);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading video data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [courseId, lectureId, moduleIndex, videoId]);
+
+  // State sync loop
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (playerRef.current && playing && !isSeeking) {
+        try {
+          const t = await playerRef.current.getCurrentTime();
+          const d = await playerRef.current.getDuration();
+          if (t && !isNaN(t)) setCurrentTime(t);
+          if (d && !isNaN(d) && d > 0) setDuration(d);
+        } catch {}
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [playing, isSeeking]);
+
+  // Save progress and mark complete at 80% threshold
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (playing && currentTime > 0 && courseId && lectureId) {
+        // Save video position
+        await saveVideoPosition(courseId, lectureId, Math.floor(currentTime)).catch(() => {});
+        
+        // Mark as complete when 80% watched
+        if (!hasMarkedComplete && duration > 0 && (currentTime / duration) >= 0.8) {
+          console.log('[Progress] Marking lecture complete at 80% threshold');
+          await updateCourseProgress(courseId, lectureId, Math.floor(currentTime / 60)).catch(() => {});
+          setHasMarkedComplete(true);
+        }
+      }
+    }, 10000); // Check every 10 seconds
+    return () => clearInterval(interval);
+  }, [playing, currentTime, duration, courseId, lectureId, hasMarkedComplete]);
+
   const onStateChange = useCallback((state: string) => {
     if (state === "ended") {
       setPlaying(false);
-      // Mark as completed
+      setShowControls(true);
       if (courseId && lectureId) {
         updateCourseProgress(courseId, lectureId, Math.floor(duration / 60)).catch(() => {});
-        saveVideoPosition(courseId, lectureId, 0).catch(() => {}); // Reset position
+        saveVideoPosition(courseId, lectureId, 0).catch(() => {});
       }
     }
     if (state === "playing") {
@@ -137,221 +231,360 @@ export default function VideoPlayerScreen() {
       setLoading(true);
     }
   }, [courseId, lectureId, duration]);
-  
+
   const onReady = useCallback(() => {
     setLoading(false);
     if (initialSeek && initialSeek > 0) {
       playerRef.current?.seekTo(initialSeek, true);
     }
   }, [initialSeek]);
-  
-  const handlePlayPause = () => {
-    setPlaying((prev) => !prev);
-    setShowControls(true);
-  };
-  
-  const handleSeek = async (seconds: number) => {
-    const newTime = Math.max(0, Math.min(currentTime + seconds, duration));
-    playerRef.current?.seekTo(newTime, true);
-    setCurrentTime(newTime);
-  };
-  
-  const handleSpeedChange = (rate: number) => {
-    setPlaybackRate(rate);
-    setShowSpeedMenu(false);
-  };
-  
-  const handleBookmark = async () => {
-    if (!courseId || !lectureId) return;
-    
-    try {
-      if (isBookmarked && bookmarkId) {
-        await removeBookmarkByLecture(courseId, lectureId);
-        setIsBookmarked(false);
-        setBookmarkId(null);
-      } else {
-        const bookmark = await addBookmark({
-          courseId,
-          lectureId,
-          lectureTitle: title || "Lecture",
-          timestamp: Math.floor(currentTime),
-        });
-        setIsBookmarked(true);
-        setBookmarkId(bookmark._id);
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to update bookmark");
+
+
+
+  const handleSeek = useCallback((value: number) => {
+    setCurrentTime(value);
+  }, []);
+
+  const handleSeekComplete = useCallback((value: number) => {
+    playerRef.current?.seekTo(value, true);
+    setIsSeeking(false);
+    if (playing) {
+      setTimeout(() => setShowControls(false), 2000);
     }
-  };
-  
-  const handleClose = async () => {
-    // Save position before closing
-    if (courseId && lectureId && currentTime > 0) {
-      await saveVideoPosition(courseId, lectureId, Math.floor(currentTime)).catch(() => {});
-    }
-    router.back();
-  };
-  
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-  
-  // Poll for current time
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (playerRef.current && playing) {
-        const time = await playerRef.current.getCurrentTime();
-        setCurrentTime(time);
-      }
-    }, 1000);
-    
-    return () => clearInterval(interval);
   }, [playing]);
-  
-  // Get duration
-  useEffect(() => {
-    const getDuration = async () => {
-      if (playerRef.current) {
-        const dur = await playerRef.current.getDuration();
-        setDuration(dur);
-      }
-    };
-    
-    if (!loading) {
-      setTimeout(getDuration, 1000);
+
+  const navigateToLecture = (lecture: Lecture, index: number) => {
+    const ytId = lecture.youtubeVideoId || extractYouTubeId(lecture.videoUrl || "") || "";
+    router.replace({
+      pathname: "/video/[lectureId]",
+      params: {
+        courseId,
+        lectureId: index.toString(),
+        videoUrl: ytId,
+        title: lecture.title,
+        moduleIndex: moduleIndex || "0",
+      },
+    });
+  };
+
+  const currentLecture = currentModule?.lectures[currentLectureIndex];
+
+  // Determine player dimensions
+  const VIDEO_ASPECT_RATIO = 16 / 9;
+  let videoWidth = windowWidth;
+  let videoHeight = windowWidth / VIDEO_ASPECT_RATIO;
+
+  if (isFullscreen) {
+    const screenAspectRatio = windowWidth / windowHeight;
+    if (screenAspectRatio > VIDEO_ASPECT_RATIO) {
+      // Screen is wider than video (e.g. landscape phone) - fit by height
+      videoHeight = windowHeight;
+      videoWidth = videoHeight * VIDEO_ASPECT_RATIO;
+    } else {
+      // Screen is taller/narrower (e.g. portrait or tablet) - fit by width
+      videoWidth = windowWidth;
+      videoHeight = videoWidth / VIDEO_ASPECT_RATIO;
     }
-  }, [loading]);
-  
-  if (!videoId) {
-    return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center">
-        <Ionicons name="alert-circle" size={64} color="#ef4444" />
-        <Text className="text-white text-lg mt-4">Invalid video URL</Text>
-        <Pressable onPress={handleClose} className="mt-6 px-6 py-3 bg-white/20 rounded-xl">
-          <Text className="text-white font-semibold">Go Back</Text>
-        </Pressable>
-      </SafeAreaView>
-    );
   }
+
+  // Container dimensions (always full space in fullscreen)
+  const containerWidth = isFullscreen ? windowWidth : windowWidth;
+  // Increase portrait height slightly (approx 3:2 ratio) as requested, otherwise fullscreen height
+  const containerHeight = isFullscreen ? windowHeight : windowWidth * 0.65;
   
+  if (!videoId) return null;
+
   return (
-    <View className="flex-1 bg-black">
-      <StatusBar hidden />
+    <View style={styles.container}>
+      <StatusBar hidden={isFullscreen} />
       
-      {/* Video Player */}
-      <Pressable 
-        onPress={() => setShowControls((prev) => !prev)} 
-        className="flex-1 justify-center"
-      >
+      {/* Video Area */}
+      <View style={{ width: containerWidth, height: containerHeight, backgroundColor: 'black', alignItems: 'center', justifyContent: 'center' }}>
         <YoutubePlayer
           ref={playerRef}
-          height={SCREEN_HEIGHT}
-          width={SCREEN_WIDTH}
+          height={videoHeight}
+          width={videoWidth}
           videoId={videoId}
           play={playing}
           onChangeState={onStateChange}
           onReady={onReady}
-          playbackRate={playbackRate}
-          webViewProps={{
-            injectedJavaScript: `
-              var element = document.getElementsByClassName('container')[0];
-              if (element) element.style.position = 'absolute';
-              true;
-            `,
+          initialPlayerParams={{
+            controls: true, // Show native controls
+            modestbranding: false,
+            rel: false,
+            preventFullScreen: true,
           }}
         />
-      </Pressable>
-      
-      {/* Loading Overlay */}
-      {loading && (
-        <View className="absolute inset-0 items-center justify-center bg-black/50">
-          <ActivityIndicator size="large" color="white" />
-        </View>
-      )}
-      
-      {/* Controls Overlay */}
-      {showControls && (
-        <View className="absolute inset-0 bg-black/30">
-          {/* Top Bar */}
-          <SafeAreaView edges={["top"]}>
-            <View className="flex-row items-center justify-between px-4 py-2">
-              <Pressable onPress={handleClose} className="p-2">
-                <Ionicons name="arrow-back" size={28} color="white" />
-              </Pressable>
-              <Text className="text-white font-semibold text-lg flex-1 mx-4" numberOfLines={1}>
-                {title || "Video"}
-              </Text>
-              <Pressable onPress={handleBookmark} className="p-2">
-                <Ionicons 
-                  name={isBookmarked ? "bookmark" : "bookmark-outline"} 
-                  size={28} 
-                  color={isBookmarked ? "#fbbf24" : "white"} 
-                />
-              </Pressable>
-            </View>
-          </SafeAreaView>
-          
-          {/* Center Controls */}
-          <View className="flex-1 flex-row items-center justify-center gap-10">
-            <Pressable onPress={() => handleSeek(-10)} className="p-4">
-              <Ionicons name="play-back" size={32} color="white" />
-              <Text className="text-white text-xs text-center">10s</Text>
-            </Pressable>
-            <Pressable onPress={handlePlayPause} className="p-6 bg-white/20 rounded-full">
-              <Ionicons name={playing ? "pause" : "play"} size={48} color="white" />
-            </Pressable>
-            <Pressable onPress={() => handleSeek(10)} className="p-4">
-              <Ionicons name="play-forward" size={32} color="white" />
-              <Text className="text-white text-xs text-center">10s</Text>
-            </Pressable>
+
+        {/* Loading Spinner */}
+        {loading && (
+          <View style={[StyleSheet.absoluteFill, styles.center]}>
+            <ActivityIndicator size="large" color="#059669" />
           </View>
-          
-          {/* Bottom Bar */}
-          <SafeAreaView edges={["bottom"]}>
-            <View className="px-4 pb-4">
-              {/* Progress Bar */}
-              <View className="flex-row items-center mb-3">
-                <Text className="text-white text-xs w-12">{formatTime(currentTime)}</Text>
-                <View className="flex-1 h-1 bg-white/30 rounded-full mx-2">
-                  <View 
-                    className="h-full bg-white rounded-full" 
-                    style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : "0%" }}
-                  />
-                </View>
-                <Text className="text-white text-xs w-12 text-right">{formatTime(duration)}</Text>
-              </View>
-              
-              {/* Speed Control */}
-              <View className="flex-row justify-end">
-                <Pressable 
-                  onPress={() => setShowSpeedMenu((prev) => !prev)}
-                  className="px-4 py-2 bg-white/20 rounded-lg flex-row items-center"
-                >
-                  <Ionicons name="speedometer" size={18} color="white" />
-                  <Text className="text-white ml-2 font-medium">{playbackRate}x</Text>
-                </Pressable>
-              </View>
-              
-              {/* Speed Menu */}
-              {showSpeedMenu && (
-                <View className="absolute bottom-20 right-4 bg-gray-900 rounded-xl overflow-hidden">
-                  {PLAYBACK_RATES.map((rate) => (
-                    <Pressable
-                      key={rate}
-                      onPress={() => handleSpeedChange(rate)}
-                      className={`px-6 py-3 ${playbackRate === rate ? "bg-emerald-600" : ""}`}
-                    >
-                      <Text className="text-white font-medium">{rate}x</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </View>
-          </SafeAreaView>
+        )}
+
+        {/* Touch Overlay (Removed to allow interaction with native player) */}
+        {/* <Pressable 
+          style={StyleSheet.absoluteFill} 
+          onPress={() => setShowControls(v => !v)}
+        /> */}
+
+        {/* Custom Fullscreen Toggle Overlay - Always visible, non-blocking */}
+        <View style={styles.fullscreenOverlay} pointerEvents="box-none">
+          <Pressable 
+            style={styles.floatingFullscreenBtn}
+            onPress={() => setIsFullscreen(f => !f)}
+            hitSlop={16}
+          >
+            <Ionicons 
+              name={isFullscreen ? "contract" : "expand"} 
+              size={24} 
+              color="white" 
+            />
+          </Pressable>
         </View>
+
+        {/* Legacy Controls Overlay (Hidden/Removed) */}
+        {false && (
+          <View style={[StyleSheet.absoluteFill, styles.controlsOverlay]} pointerEvents="box-none">
+            {/* ... code ... */}
+          </View>
+        )}
+      </View>
+
+      {/* Info & Up Next (Portrait only) */}
+      {!isFullscreen && (
+        <ScrollView style={styles.scrollContent}>
+          {/* Header */}
+          <View style={styles.infoContainer}>
+            <View style={styles.row}>
+               <Pressable 
+                 onPress={() => {
+                   if (isFullscreen) setIsFullscreen(false);
+                   else router.back();
+                 }} 
+                 style={{ marginRight: 10 }}
+               >
+                 <Ionicons name="arrow-back" size={24} color="#1f2937" />
+               </Pressable>
+               <Text style={styles.courseTitle} numberOfLines={1}>{courseTitle}</Text>
+            </View>
+            <Text style={styles.videoTitle}>{title || currentLecture?.title}</Text>
+            {currentModule && (
+              <Text style={styles.moduleText}>
+                Module: {currentModule.title}
+              </Text>
+            )}
+          </View>
+
+          {/* Up Next */}
+          {currentModule && (
+            <View style={styles.listContainer}>
+              <Text style={styles.listHeader}>Up Next</Text>
+              {currentModule.lectures.map((item, idx) => {
+                const isCurrent = idx === currentLectureIndex;
+                const ytId = item.youtubeVideoId || extractYouTubeId(item.videoUrl || "");
+                const thumb = item.youtubeMeta?.thumbnail || (ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : null);
+                
+                return (
+                  <Pressable 
+                    key={idx}
+                    style={[styles.itemRow, isCurrent && styles.activeItem]}
+                    onPress={() => !isCurrent && navigateToLecture(item, idx)}
+                  >
+                    <View style={styles.thumbContainer}>
+                      {thumb ? (
+                        <Image source={{ uri: thumb }} style={styles.thumbImage} resizeMode="cover" />
+                      ) : (
+                         <View style={[styles.thumbImage, styles.center, {backgroundColor: '#e5e7eb'}]}>
+                           <Ionicons name="play-circle" size={24} color="#9ca3af" />
+                         </View>
+                      )}
+                      {item.youtubeMeta?.durationSec && (
+                        <View style={styles.durationBadge}>
+                           <Text style={styles.durationText}>{formatDuration(item.youtubeMeta.durationSec)}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.itemInfo}>
+                      <Text style={[styles.itemTitle, isCurrent && {color: '#059669', fontWeight: '700'}]} numberOfLines={2}>
+                        {idx + 1}. {item.title}
+                      </Text>
+                      {isCurrent && (
+                        <Text style={styles.playingText}>Now Playing</Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+          <View style={{height: 40}} />
+        </ScrollView>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreenOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end', // Position bottom
+    alignItems: 'flex-end', // Position right
+    padding: 16,
+    zIndex: 10,
+    pointerEvents: 'box-none',
+  },
+  floatingFullscreenBtn: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 10, // Bottom margin to avoid native seekbar if visible
+    marginRight: 2, // Right margin
+  },
+  controlsOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'space-between',
+    padding: 10,
+  },
+  topControls: {
+    height: 50,
+    justifyContent: 'center',
+  },
+  videoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerBtn: {
+    padding: 8,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+    flex: 1,
+  },
+  playButton: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomControls: {
+    paddingBottom: 5,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  timeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    width: 45,
+    textAlign: 'center',
+  },
+  fullscreenBtn: {
+    padding: 8,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  infoContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  courseTitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  videoTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  moduleText: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '600',
+  },
+  listContainer: {
+    padding: 16,
+  },
+  listHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  activeItem: {
+    backgroundColor: '#f0fdf4',
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  thumbContainer: {
+    width: 120,
+    height: 68,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  durationBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  durationText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  itemInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  itemTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    lineHeight: 20,
+  },
+  playingText: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+});

@@ -21,6 +21,9 @@ export interface User {
   groups?: string[];
   firebaseUid?: string;
   welcomeTutorialCompleted?: boolean;
+  targetExams?: string[];
+  studyGoals?: string[];
+  profileImage?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -62,7 +65,7 @@ export interface ExamOption {
 export interface Question {
   _id: string;
   text: string;
-  type: 'mcq' | 'text' | 'essay' | 'numerical';
+  type: 'mcq' | 'text' | 'essay' | 'numerical' | 'true_false' | 'multi_select' | 'assertion_reason';
   options?: ExamOption[];
   correctAnswer?: string;
   marks?: number;
@@ -71,6 +74,8 @@ export interface Question {
   imageUrl?: string;
   subject?: string;
   topic?: string;
+  assertionText?: string;
+  reasonText?: string;
   difficulty?: 'easy' | 'medium' | 'hard';
   createdAt?: string;
 }
@@ -109,6 +114,21 @@ export interface Exam {
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Dynamic/Populated fields
+  schedule?: {
+    startAt?: string;
+    endAt?: string;
+  };
+  startAt?: string;
+  endAt?: string;
+}
+
+export interface ProgressDataPoint {
+  id: string;
+  label: string;
+  value: number;
+  percent: number;
+  date: string;
 }
 
 export interface ExamFilters {
@@ -140,9 +160,11 @@ export interface Answer {
   scoreAwarded?: number;
   isCorrect?: boolean;
   timeTaken?: number;
+  selectedOptionIds?: string[];
+  markedForReview?: boolean;
 }
 
-export type AttemptStatus = 'in-progress' | 'submitted' | 'reviewed' | 'published';
+export type AttemptStatus = 'in-progress' | 'submitted' | 'reviewed' | 'published' | 'auto-submitted';
 
 export interface Attempt {
   _id: string;
@@ -167,6 +189,13 @@ export interface PendingReview extends Attempt {
 }
 
 export interface ReviewData {
+  attempt: Attempt;
+  exam: Exam;
+  sections: ExamSection[];
+  questions: Record<string, Question>;
+}
+
+export interface AttemptDetailResponse {
   attempt: Attempt;
   exam: Exam;
   sections: ExamSection[];

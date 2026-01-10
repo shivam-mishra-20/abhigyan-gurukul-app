@@ -1,18 +1,37 @@
 import { AnimatedTabBar } from "@/components/animated-tab-bar";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { apiFetch } from "@/lib/api";
+import { getToken } from "@/lib/auth";
 import { useAppTheme } from "@/lib/context";
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { BookOpen, GraduationCap, Home, User } from "lucide-react-native";
+import { useEffect } from "react";
 
 export default function StudentLayout() {
   const { isDark } = useAppTheme();
+  const { expoPushToken } = usePushNotifications();
+
+  useEffect(() => {
+    if (expoPushToken) {
+      getToken().then((token) => {
+        if (token) {
+          apiFetch("/api/notifications/register-token", {
+            method: "POST",
+            body: JSON.stringify({ pushToken: expoPushToken }),
+          }).catch((err) => console.error("Failed to register token", err));
+        }
+      });
+    }
+  }, [expoPushToken]);
 
   return (
     <Tabs
       tabBar={(props) => (
         <AnimatedTabBar
           {...props}
-          activeTintColor={isDark ? "#6366F1" : "#059669"} // Indigo for dark, green for light
-          inactiveTintColor={isDark ? "#A1A1AA" : "#6B7280"}
+          activeTintColor={isDark ? "#6366F1" : "#059669"}
+          inactiveTintColor={isDark ? "#A1A1AA" : "#9CA3AF"}
           backgroundColor={isDark ? "#27272A" : "#FFFFFF"}
           isDark={isDark}
         />
@@ -57,17 +76,22 @@ export default function StudentLayout() {
           ),
         }}
       />
-      {/* Hide other screens from tab bar - accessible via navigation */}
-      <Tabs.Screen name="exams" options={{ href: null }} />
-      <Tabs.Screen name="results" options={{ href: null }} />
-      <Tabs.Screen name="progress" options={{ href: null }} />
-      <Tabs.Screen name="attendance" options={{ href: null }} />
-      <Tabs.Screen name="materials" options={{ href: null }} />
-      <Tabs.Screen name="schedule" options={{ href: null }} />
-      <Tabs.Screen name="leaderboard" options={{ href: null }} />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: "More",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="grid-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      
+      {/* Hidden Screens */}
+      <Tabs.Screen name="modules" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="attempt/[attemptId]" options={{ href: null }} />
       <Tabs.Screen name="result/[attemptId]" options={{ href: null }} />
       <Tabs.Screen name="course/[courseId]" options={{ href: null }} />
+      <Tabs.Screen name="video/[lectureId]" options={{ href: null }} />
     </Tabs>
   );
 }

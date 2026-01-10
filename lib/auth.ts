@@ -11,6 +11,10 @@ export type User = {
   classLevel?: string;
   batch?: string;
   firebaseUid?: string;
+  phone?: string;
+  targetExams?: string[];
+  studyGoals?: string[];
+  profileImage?: string;
 };
 
 export type LoginResponse = { token?: string; user?: User };

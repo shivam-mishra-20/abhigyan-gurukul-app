@@ -1,23 +1,23 @@
 import { useRouter } from "expo-router";
 import {
-  BarChart3,
-  Bell,
-  BookOpen,
-  CheckCircle,
-  ClipboardCheck,
-  Library,
-  PlusCircle,
-  Users
+    BarChart3,
+    Bell,
+    BookOpen,
+    CheckCircle,
+    ClipboardCheck,
+    Library,
+    PlusCircle,
+    Users
 } from "lucide-react-native";
 import React, { useCallback, useEffect } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -178,7 +178,7 @@ export default function TeacherHome() {
 
             {/* Notification Icon */}
             <Pressable
-              onPress={() => navigateTo("/(teacher)/more/notifications")}
+              onPress={() => navigateTo("/(teacher)/notifications")}
               style={styles.notificationButton}
             >
               <Bell size={24} color="white" strokeWidth={2.5} />

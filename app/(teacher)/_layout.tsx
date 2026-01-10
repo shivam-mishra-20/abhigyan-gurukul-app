@@ -1,17 +1,34 @@
 import { AnimatedTabBar } from "@/components/animated-tab-bar";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { apiFetch } from "@/lib/api";
+import { getToken } from "@/lib/auth";
 import { useAppTheme } from "@/lib/context";
 import { Tabs } from "expo-router";
 import {
-  CircleHelp,
-  ClipboardCheck,
-  FilePlus,
-  Home,
-  LayoutGrid,
+    CircleHelp,
+    ClipboardCheck,
+    FilePlus,
+    Home,
+    LayoutGrid,
 } from "lucide-react-native";
-import React from "react";
+import React, { useEffect } from "react";
 
 export default function TeacherLayout() {
   const { isDark } = useAppTheme();
+  const { expoPushToken } = usePushNotifications();
+
+  useEffect(() => {
+    if (expoPushToken) {
+      getToken().then((token) => {
+        if (token) {
+          apiFetch("/api/notifications/register-token", {
+            method: "POST",
+            body: JSON.stringify({ pushToken: expoPushToken }),
+          }).catch((err) => console.error("Failed to register token", err));
+        }
+      });
+    }
+  }, [expoPushToken]);
 
   return (
     <Tabs

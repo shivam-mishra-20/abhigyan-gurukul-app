@@ -1,17 +1,15 @@
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-    Animated,
-    Dimensions,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-
-const { width } = Dimensions.get("window");
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 85 : 70;
 const CURVE_HEIGHT = 0;
 const ACTIVE_CIRCLE_SIZE = 56;
@@ -31,12 +29,21 @@ export function AnimatedTabBar({
   inactiveTintColor = "#6B7280",
   backgroundColor = "#FFFFFF",
 }: AnimatedTabBarProps) {
+  // Use reactive window dimensions to handle orientation changes (fullscreen mode)
+  const { width } = useWindowDimensions();
+  
+  const focusedRoute = state.routes[state.index];
+  const focusedDescriptor = descriptors[focusedRoute.key];
+  const focusedOptions = focusedDescriptor.options;
+  
+  // @ts-ignore
+  const shouldHide = focusedOptions.tabBarStyle?.display === "none";
+
   const visibleRoutes = useMemo(() => {
     return state.routes.filter((route) => {
       const { options } = descriptors[route.key];
 
       const hiddenRoutes = [
-        "profile",
         "reviews",
         "batches",
         "students",
@@ -52,9 +59,11 @@ export function AnimatedTabBar({
         "materials",
         "schedule",
         "leaderboard",
+        "modules",
         "attempt/[attemptId]",
         "result/[attemptId]",
         "course/[courseId]",
+        "video/[lectureId]",
       ];
 
       if (hiddenRoutes.includes(route.name)) {
@@ -108,7 +117,7 @@ export function AnimatedTabBar({
       Z
     `;
     },
-    [tabWidth]
+    [tabWidth, width]
   );
 
   const [pathD, setPathD] = React.useState(() => {
@@ -149,6 +158,10 @@ export function AnimatedTabBar({
       (_, i) => i * tabWidth + tabWidth / 2 - ACTIVE_CIRCLE_SIZE / 2
     ),
   });
+
+  if (shouldHide) {
+    return null;
+  }
 
   return (
     <View style={styles.wrapper}>

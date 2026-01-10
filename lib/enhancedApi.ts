@@ -32,8 +32,15 @@ export interface CourseLecture {
   _id?: string;
   title: string;
   videoUrl?: string;
+  youtubeVideoId?: string;
   duration?: number;
   order: number;
+  youtubeMeta?: {
+    durationSec: number;
+    thumbnail: string;
+    title: string;
+    fetchedAt: string;
+  };
 }
 
 export interface AttendanceRecord {

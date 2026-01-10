@@ -1,23 +1,23 @@
 import MathText from "@/components/ui/MathText";
 import {
-  getAttempt,
-  markForReview,
-  saveAnswer,
-  submitAttempt,
+    getAttempt,
+    markForReview,
+    saveAnswer,
+    submitAttempt,
 } from "@/lib/studentApi";
 import type { Answer, AttemptDetailResponse, Question } from "@/lib/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    BackHandler,
+    Modal,
+    Pressable,
+    ScrollView,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -278,7 +278,7 @@ export default function AttemptPlayerScreen() {
     try {
       await submitAttempt(attemptId!);
       Alert.alert("Success", "Your exam has been submitted successfully!", [
-        { text: "OK", onPress: () => router.replace("/(student)/exams" as any) },
+        { text: "OK", onPress: () => router.replace("/(student)/modules/exams" as any) },
       ]);
     } catch (error: any) {
       console.error("Error submitting:", error);
