@@ -65,13 +65,15 @@ export interface ExamOption {
 export interface Question {
   _id: string;
   text: string;
-  type: 'mcq' | 'text' | 'essay' | 'numerical' | 'true_false' | 'multi_select' | 'assertion_reason';
+  type: 'mcq' | 'mcq-single' | 'mcq-multi' | 'text' | 'essay' | 'numerical' | 'integer' | 'true_false' | 'true-false' | 'truefalse' | 'multi_select' | 'assertion_reason' | 'assertionreason' | 'short' | 'long' | 'subjective';
   options?: ExamOption[];
   correctAnswer?: string;
   marks?: number;
   hint?: string;
   solution?: string;
+  explanation?: string;
   imageUrl?: string;
+  diagramUrl?: string;
   subject?: string;
   topic?: string;
   assertionText?: string;

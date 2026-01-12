@@ -12,23 +12,46 @@ import type {
 
 /**
  * Get list of exams assigned to the logged-in student
+ * Calls both /assigned (for exams) and /mine (for attempts) to match web app behavior
  */
 export async function getAssignedExams(): Promise<{
   exams: Exam[];
   attempts: Record<string, Attempt>;
 }> {
-  const data = await apiFetch('/api/attempts/assigned');
-  return data as { exams: Exam[]; attempts: Record<string, Attempt> };
+  // Call both APIs in parallel like the web app does
+  const [examsData, attemptsData] = await Promise.all([
+    apiFetch('/api/attempts/assigned'),
+    apiFetch('/api/attempts/mine'),
+  ]);
+
+  // Exams API returns an array directly
+  const exams = Array.isArray(examsData) ? (examsData as Exam[]) : [];
+  
+  // Attempts API returns an array, convert to Record<examId, Attempt>
+  const attempts: Record<string, Attempt> = {};
+  if (Array.isArray(attemptsData)) {
+    for (const attempt of attemptsData as Attempt[]) {
+      const examId = typeof attempt.examId === 'string' ? attempt.examId : (attempt.examId as any)?._id;
+      if (examId) {
+        attempts[examId] = attempt;
+      }
+    }
+  }
+  
+  return { exams, attempts };
 }
 
 /**
  * Start a new exam attempt
+ * The API returns the full attempt object, we extract the _id as attemptId
  */
 export async function startExamAttempt(examId: string): Promise<{ attemptId: string }> {
   const data = await apiFetch(`/api/attempts/${examId}/start`, {
     method: 'POST',
   });
-  return data as { attemptId: string };
+  // API returns the full attempt object with _id
+  const attempt = data as Attempt;
+  return { attemptId: attempt._id };
 }
 
 /**

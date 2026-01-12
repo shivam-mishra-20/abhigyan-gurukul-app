@@ -13,10 +13,12 @@ import {
     ActivityIndicator,
     Alert,
     BackHandler,
+    Image,
     Modal,
     Pressable,
     ScrollView,
     Text,
+    TextInput,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -320,7 +322,10 @@ export default function AttemptPlayerScreen() {
 
     switch (question.type) {
       case "mcq":
+      case "mcq-single":
       case "true_false":
+      case "true-false":
+      case "truefalse":
         return (
           <View className="mt-4">
             {question.options?.map((opt, idx) => {
@@ -355,6 +360,7 @@ export default function AttemptPlayerScreen() {
         );
 
       case "multi_select":
+      case "mcq-multi": {
         const selectedIds = Array.isArray(currentAnswer) ? currentAnswer : [];
         return (
           <View className="mt-4">
@@ -389,8 +395,10 @@ export default function AttemptPlayerScreen() {
             })}
           </View>
         );
+      }
 
       case "assertion_reason":
+      case "assertionreason":
         return (
           <View className="mt-4">
             <View className="bg-emerald-50 rounded-xl p-4 mb-4 border border-emerald-200">
@@ -426,6 +434,41 @@ export default function AttemptPlayerScreen() {
                 </Pressable>
               );
             })}
+          </View>
+        );
+
+      case "integer":
+      case "numerical":
+        return (
+          <View className="mt-4">
+            <TextInput
+              keyboardType="numeric"
+              className="border-2 border-gray-200 rounded-xl p-4 text-gray-900 text-base bg-white"
+              placeholder="Enter your answer (number)"
+              placeholderTextColor="#9ca3af"
+              value={String(currentAnswer || "")}
+              onChangeText={(val) => handleAnswerChange(questionId, val)}
+            />
+          </View>
+        );
+
+      case "subjective":
+      case "short":
+      case "long":
+      case "text":
+      case "essay":
+        return (
+          <View className="mt-4">
+            <TextInput
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+              className="border-2 border-gray-200 rounded-xl p-4 text-gray-900 text-base bg-white min-h-[150px]"
+              placeholder="Type your answer here..."
+              placeholderTextColor="#9ca3af"
+              value={String(currentAnswer || "")}
+              onChangeText={(val) => handleAnswerChange(questionId, val)}
+            />
           </View>
         );
 
@@ -529,6 +572,18 @@ export default function AttemptPlayerScreen() {
           <View className="mb-2">
             <MathText text={question?.text || ""} fontSize={16} />
           </View>
+
+          {/* Diagram Image */}
+          {question?.diagramUrl && (
+            <View className="mb-4">
+              <Image
+                source={{ uri: question.diagramUrl }}
+                style={{ width: '100%', height: 200 }}
+                resizeMode="contain"
+                className="rounded-lg"
+              />
+            </View>
+          )}
 
           {/* Question Options */}
           {renderQuestionInput()}

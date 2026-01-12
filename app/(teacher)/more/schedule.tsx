@@ -4,24 +4,23 @@ import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const THEME = {
   primary: "#059669",
-  primaryLight: "#10b981",
 };
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function ScheduleScreen() {
+export default function TeacherScheduleScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,25 +43,16 @@ export default function ScheduleScreen() {
   useEffect(() => {
     loadData();
 
-    // Listen for real-time schedule updates (optional - may not work in Expo Go)
-    try {
-      notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-        const data = notification.request.content.data;
-        if (data && data.type === 'schedule_update') {
-          loadData();
-        }
-      });
-    } catch {
-      console.log('Push notifications not available in Expo Go');
-    }
-
-    // Auto-refresh every 30 seconds for real-time updates
-    const refreshInterval = setInterval(loadData, 30000);
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      const data = notification.request.content.data;
+      if (data && data.type === 'schedule_update') {
+        loadData();
+      }
+    });
 
     return () => {
-      clearInterval(refreshInterval);
       if (notificationListener.current) {
-        notificationListener.current.remove();
+        Notifications.removeNotificationSubscription(notificationListener.current);
       }
     };
   }, []);
@@ -105,7 +95,7 @@ export default function ScheduleScreen() {
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#1f2937" />
           </Pressable>
-          <Text style={styles.headerTitle}>Class Schedule</Text>
+          <Text style={styles.headerTitle}>My Teaching Schedule</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -136,56 +126,55 @@ export default function ScheduleScreen() {
           })}
         </View>
 
-        {/* Current / Next Class Highlight */}
-        {(currentClass || nextClass) && selectedDay === new Date().getDay() && (
+        {/* Current Class Highlight */}
+        {currentClass && selectedDay === new Date().getDay() && (
           <View style={styles.highlightSection}>
-            {currentClass && (
-              <View style={styles.currentCard}>
-                <View style={styles.liveRow}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveLabel}>ONGOING NOW</Text>
-                </View>
-                <Text style={styles.currentSubject}>{currentClass.subject}</Text>
-                <Text style={styles.currentMeta}>
-                  Room {currentClass.roomNumber} • {currentClass.teacherName}
-                </Text>
-                <Text style={styles.currentTime}>
-                  {currentClass.startTimeSlot} - {currentClass.endTimeSlot}
-                </Text>
+            <View style={styles.currentCard}>
+              <View style={styles.liveRow}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveLabel}>YOUR CLASS IS ONGOING</Text>
               </View>
-            )}
-            {nextClass && !currentClass && (
-              <View style={styles.nextCard}>
-                <Text style={styles.nextLabel}>NEXT CLASS</Text>
-                <Text style={styles.nextSubject}>{nextClass.subject}</Text>
-                <Text style={styles.nextMeta}>
-                  {nextClass.startTimeSlot} • Room {nextClass.roomNumber}
-                </Text>
-              </View>
-            )}
+              <Text style={styles.currentSubject}>{currentClass.subject}</Text>
+              <Text style={styles.currentMeta}>
+                Class {currentClass.classLevel} - {currentClass.batch} | Room {currentClass.roomNumber}
+              </Text>
+              <Text style={styles.currentTime}>
+                {currentClass.startTimeSlot} - {currentClass.endTimeSlot}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Next Class */}
+        {nextClass && !currentClass && selectedDay === new Date().getDay() && (
+          <View style={styles.highlightSection}>
+            <View style={styles.nextCard}>
+              <Text style={styles.nextLabel}>NEXT CLASS</Text>
+              <Text style={styles.nextSubject}>{nextClass.subject}</Text>
+              <Text style={styles.nextMeta}>
+                Class {nextClass.classLevel} - {nextClass.batch} | {nextClass.startTimeSlot}
+              </Text>
+            </View>
           </View>
         )}
 
         {/* Schedule List */}
         <View style={styles.scheduleSection}>
           <Text style={styles.sectionTitle}>
-            {selectedDay === new Date().getDay() ? "Today's Schedule" : `${DAYS[selectedDay]} Schedule`}
+            {selectedDay === new Date().getDay() ? "Today's Classes" : `${DAYS[selectedDay]} Classes`}
           </Text>
           
           {todaySchedule.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={48} color="#d1d5db" />
-              <Text style={styles.emptyText}>No classes scheduled</Text>
+              <Text style={styles.emptyText}>No classes assigned</Text>
             </View>
           ) : (
             <View style={styles.scheduleList}>
               {todaySchedule.map((item, index) => {
                 const isCurrent = liveData?.currentSlot === item.startTimeSlot;
                 return (
-                  <View 
-                    key={item._id || index} 
-                    style={[styles.scheduleItem, isCurrent && styles.scheduleItemActive]}
-                  >
+                  <View key={item._id || index} style={styles.scheduleItem}>
                     <View style={styles.timeColumn}>
                       <Text style={[styles.timeText, isCurrent && styles.timeTextActive]}>
                         {item.startTimeSlot}
@@ -204,18 +193,10 @@ export default function ScheduleScreen() {
                         )}
                       </View>
                       <View style={styles.scheduleCardMeta}>
-                        <View style={styles.metaItem}>
-                          <Ionicons name="location-outline" size={14} color={isCurrent ? THEME.primary : "#6b7280"} />
-                          <Text style={[styles.metaText, isCurrent && styles.metaTextActive]}>
-                            Room {item.roomNumber}
-                          </Text>
-                        </View>
-                        <View style={styles.metaItem}>
-                          <Ionicons name="person-outline" size={14} color={isCurrent ? THEME.primary : "#6b7280"} />
-                          <Text style={[styles.metaText, isCurrent && styles.metaTextActive]}>
-                            {item.teacherName || 'TBA'}
-                          </Text>
-                        </View>
+                        <Text style={styles.classInfo}>
+                          Class {item.classLevel} - {item.batch}
+                        </Text>
+                        <Text style={styles.roomInfo}>Room {item.roomNumber}</Text>
                       </View>
                     </View>
                   </View>
@@ -266,7 +247,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111827",
   },
-  // Day Selector
   daySelector: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -300,7 +280,6 @@ const styles = StyleSheet.create({
   dayTextToday: {
     color: THEME.primary,
   },
-  // Highlight Section
   highlightSection: {
     padding: 16,
   },
@@ -364,7 +343,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#b45309",
   },
-  // Schedule Section
   scheduleSection: {
     padding: 16,
   },
@@ -390,7 +368,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
   },
-  scheduleItemActive: {},
   timeColumn: {
     width: 50,
     marginRight: 12,
@@ -448,18 +425,15 @@ const styles = StyleSheet.create({
   },
   scheduleCardMeta: {
     flexDirection: "row",
-    gap: 16,
+    justifyContent: "space-between",
   },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 12,
+  classInfo: {
+    fontSize: 13,
     color: "#6b7280",
   },
-  metaTextActive: {
-    color: THEME.primary,
+  roomInfo: {
+    fontSize: 13,
+    color: "#6b7280",
+    fontWeight: "500",
   },
 });

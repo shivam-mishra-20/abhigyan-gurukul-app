@@ -105,14 +105,29 @@ export interface ScheduleItem {
   _id: string;
   title: string;
   description?: string;
+  scheduleType: 'regular' | 'custom';
   type: 'class' | 'exam' | 'event' | 'holiday';
-  startTime: string;
-  endTime: string;
-  subject?: string;
+  startTimeSlot: string;
+  endTimeSlot: string;
+  dayOfWeek?: number;
+  date?: string;
+  subject: string;
   classLevel?: string;
   batch?: string;
+  roomNumber: number;
+  teacherName?: string;
   instructor?: { _id: string; name: string };
-  location?: string;
+  status?: 'past' | 'ongoing' | 'upcoming';
+}
+
+export interface LiveScheduleResponse {
+  currentClass: ScheduleItem | null;
+  nextClass: ScheduleItem | null;
+  todaySchedule: ScheduleItem[];
+  currentTime: string;
+  dayOfWeek: number;
+  currentSlot: string | null;
+  nextSlot: string | null;
 }
 
 export interface LeaderboardEntry {
@@ -241,6 +256,10 @@ export async function getSchedule(filters?: {
 
 export async function getTodaySchedule(): Promise<ScheduleItem[]> {
   return apiFetch('/api/schedule/today') as Promise<ScheduleItem[]>;
+}
+
+export async function getLiveSchedule(): Promise<LiveScheduleResponse> {
+  return apiFetch('/api/schedule/live') as Promise<LiveScheduleResponse>;
 }
 
 export async function getUpcomingSchedule(limit?: number): Promise<ScheduleItem[]> {

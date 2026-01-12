@@ -1,6 +1,8 @@
 import WelcomeTutorial from "@/components/WelcomeTutorial";
 import { getUser } from "@/lib/auth";
-import { Course, getEnrolledCourses } from "@/lib/enhancedApi";
+import { Course, getEnrolledCourses, getLiveSchedule, LiveScheduleResponse } from "@/lib/enhancedApi";
+import { getAssignedExams } from "@/lib/studentApi";
+import type { Attempt, Exam } from "@/lib/types";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -13,7 +15,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 
 // Rich green theme colors
@@ -89,19 +91,52 @@ export default function StudentHome() {
   
   // Data states
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
+  const [upcomingExam, setUpcomingExam] = useState<Exam | null>(null);
+  const [examAttempt, setExamAttempt] = useState<Attempt | null>(null);
+  const [liveSchedule, setLiveSchedule] = useState<LiveScheduleResponse | null>(null);
 
   const loadData = async () => {
     try {
-      const [userData, courses, storedImage] = await Promise.all([
+      const [userData, courses, storedImage, examsData, scheduleData] = await Promise.all([
         getUser(),
         getEnrolledCourses().catch(() => []),
         AsyncStorage.getItem("profile_image"),
+        getAssignedExams().catch(() => ({ exams: [], attempts: {} })),
+        getLiveSchedule().catch(() => null),
       ]);
+      
+      setLiveSchedule(scheduleData);
 
       const hasSeenTutorial = await AsyncStorage.getItem("has_seen_welcome_tutorial");
       
       setUser(userData);
       setEnrolledCourses(courses);
+      
+      // Find next upcoming or active exam
+      const now = new Date();
+      const exams = examsData?.exams || [];
+      const attempts = examsData?.attempts || {};
+      
+      const availableExams = exams
+        .filter((exam: Exam) => {
+          const attempt = (attempts as Record<string, Attempt>)[exam._id];
+          // Not submitted yet
+          if (attempt?.status === 'submitted' || attempt?.status === 'auto-submitted') return false;
+          // Check if exam is still active or upcoming
+          const endAt = exam.schedule?.endAt || exam.endAt;
+          if (endAt && new Date(endAt) < now) return false;
+          return true;
+        })
+        .sort((a: Exam, b: Exam) => {
+          const aStart = new Date(a.schedule?.startAt || a.startAt || 0);
+          const bStart = new Date(b.schedule?.startAt || b.startAt || 0);
+          return aStart.getTime() - bStart.getTime();
+        });
+      
+      if (availableExams.length > 0) {
+        setUpcomingExam(availableExams[0]);
+        setExamAttempt((attempts as Record<string, Attempt>)[availableExams[0]._id] || null);
+      }
       // Use server profile image first, fallback to local storage
       if (userData?.profileImage) {
         setProfileImage(userData.profileImage);
@@ -185,6 +220,44 @@ export default function StudentHome() {
             )}
           </Pressable>
         </View>
+
+        {/* Current/Next Class Section - Displayed at top */}
+        {(liveSchedule?.currentClass || liveSchedule?.nextClass) && (
+          <Pressable 
+            onPress={() => router.push("/(student)/modules/schedule")}
+            style={styles.classHighlightCard}
+          >
+            {liveSchedule.currentClass ? (
+              <>
+                <View style={styles.liveClassIndicator}>
+                  <View style={styles.liveClassDot} />
+                  <Text style={styles.liveClassLabel}>HAPPENING NOW</Text>
+                </View>
+                <Text style={styles.liveClassSubject}>{liveSchedule.currentClass.subject}</Text>
+                <Text style={styles.liveClassMeta}>
+                  Room {liveSchedule.currentClass.roomNumber} • {liveSchedule.currentClass.teacherName}
+                </Text>
+                <Text style={styles.liveClassTime}>
+                  {liveSchedule.currentClass.startTimeSlot} - {liveSchedule.currentClass.endTimeSlot}
+                </Text>
+              </>
+            ) : liveSchedule.nextClass ? (
+              <>
+                <View style={styles.nextClassIndicator}>
+                  <Ionicons name="time-outline" size={16} color="#f59e0b" />
+                  <Text style={styles.nextClassLabelHighlight}>NEXT CLASS</Text>
+                </View>
+                <Text style={styles.nextUpSubject}>{liveSchedule.nextClass.subject}</Text>
+                <Text style={styles.nextUpMeta}>
+                  {liveSchedule.nextClass.startTimeSlot} • Room {liveSchedule.nextClass.roomNumber}
+                </Text>
+              </>
+            ) : null}
+            <View style={styles.classCardArrow}>
+              <Ionicons name="chevron-forward" size={18} color="white" />
+            </View>
+          </Pressable>
+        )}
 
         {/* Hero Text */}
         <View style={styles.heroSection}>
@@ -372,6 +445,129 @@ export default function StudentHome() {
           )}
         </View>
 
+        {/* Upcoming Exam */}
+        {upcomingExam && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Upcoming Exam</Text>
+              <Pressable onPress={() => router.push("/(student)/modules/exams")}>
+                <Text style={styles.seeAllText}>All Exams</Text>
+              </Pressable>
+            </View>
+            
+            <Pressable
+              style={styles.examCard}
+              onPress={() => {
+                if (examAttempt?._id) {
+                  router.push(`/(student)/attempt/${examAttempt._id}` as any);
+                } else {
+                  router.push("/(student)/modules/exams");
+                }
+              }}
+            >
+              <View style={styles.examCardLeft}>
+                <View style={styles.examIconContainer}>
+                  <Ionicons name="document-text" size={24} color="#3b82f6" />
+                </View>
+                <View style={styles.examInfo}>
+                  <Text style={styles.examTitle} numberOfLines={1}>
+                    {upcomingExam.title}
+                  </Text>
+                  <View style={styles.examMeta}>
+                    {upcomingExam.totalDurationMins && (
+                      <View style={styles.examMetaItem}>
+                        <Ionicons name="time-outline" size={14} color="#6b7280" />
+                        <Text style={styles.examMetaText}>{upcomingExam.totalDurationMins} mins</Text>
+                      </View>
+                    )}
+                    {(upcomingExam.schedule?.startAt || upcomingExam.startAt) && (
+                      <View style={styles.examMetaItem}>
+                        <Ionicons name="calendar-outline" size={14} color="#6b7280" />
+                        <Text style={styles.examMetaText}>
+                          {new Date(upcomingExam.schedule?.startAt || upcomingExam.startAt || '').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+              <View style={[
+                styles.examStatusBadge,
+                examAttempt?.status === 'in-progress' 
+                  ? { backgroundColor: '#fef3c7' } 
+                  : { backgroundColor: '#dcfce7' }
+              ]}>
+                <Text style={[
+                  styles.examStatusText,
+                  examAttempt?.status === 'in-progress'
+                    ? { color: '#b45309' }
+                    : { color: THEME.primary }
+                ]}>
+                  {examAttempt?.status === 'in-progress' ? 'Resume' : 'Start'}
+                </Text>
+                <Ionicons 
+                  name="chevron-forward" 
+                  size={14} 
+                  color={examAttempt?.status === 'in-progress' ? '#b45309' : THEME.primary} 
+                />
+              </View>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Today's Schedule */}
+        {liveSchedule && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Today&apos;s Classes</Text>
+              <Pressable onPress={() => router.push("/(student)/modules/schedule")}>
+                <Text style={styles.seeAllText}>Full Timetable</Text>
+              </Pressable>
+            </View>
+            
+            {/* Today's Classes List (Filtered to show only ongoing and upcoming) */}
+            <View style={styles.scheduleList}>
+              {liveSchedule.todaySchedule.filter(item => item.status !== 'past').length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No upcoming classes for today</Text>
+                </View>
+              ) : (
+                liveSchedule.todaySchedule
+                  .filter(item => item.status !== 'past')
+                  .slice(0, 4)
+                  .map((item, index) => {
+                    const isOngoing = item.status === 'ongoing';
+                    return (
+                      <View 
+                        key={item._id || index} 
+                        style={[styles.scheduleItem, isOngoing && styles.scheduleItemActive]}
+                      >
+                        <View style={styles.scheduleTime}>
+                          <Text style={[styles.scheduleTimeText, isOngoing && styles.scheduleTimeTextActive]}>
+                            {item.startTimeSlot}
+                          </Text>
+                        </View>
+                        <View style={styles.scheduleDetails}>
+                          <Text style={[styles.scheduleSubject, isOngoing && styles.scheduleSubjectActive]}>
+                            {item.subject}
+                          </Text>
+                          <Text style={styles.scheduleTeacher}>
+                            Room {item.roomNumber} • {item.teacherName || 'TBA'}
+                          </Text>
+                        </View>
+                        {isOngoing && (
+                          <View style={styles.ongoingBadge}>
+                            <Text style={styles.ongoingText}>ONGOING</Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -430,7 +626,7 @@ export default function StudentHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8fafc",
   },
   contentContainer: {
     paddingBottom: 100,
@@ -439,174 +635,59 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "white",
+    backgroundColor: "#f8fafc",
   },
   // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingTop: 56,
-    paddingHorizontal: 24,
-    marginBottom: 20,
+    alignItems: "center",
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    backgroundColor: "white",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
   },
-  headerLeft: {},
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   greeting: {
-    fontSize: 15,
-    color: "#9ca3af",
+    fontSize: 14,
+    color: "#64748b",
     marginBottom: 4,
   },
   userName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#111827",
+    color: "#0f172a",
   },
   avatarContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "#f3f4f6",
-  },
-  avatar: {
-    width: "100%",
-    height: "100%",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: THEME.primary,
+    overflow: "hidden",
   },
   avatarImage: {
-    width: "100%",
-    height: "100%",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatarText: {
     fontSize: 18,
     fontWeight: "700",
     color: "white",
   },
-  // Hero
-  heroSection: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  heroTextNormal: {
-    fontSize: 32,
-    color: "#111827",
-  },
-  heroRow: {
-    flexDirection: "row",
-  },
-  heroTextHighlight: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: THEME.primary,
-  },
-  // Featured Card
-  featuredCard: {
-    marginHorizontal: 24,
-    height: 280,
-    borderRadius: 28,
-    overflow: "hidden",
-    marginBottom: 28,
-  },
-  featuredImage: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  featuredOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  featuredContent: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "space-between",
-  },
-  featuredTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  featuredBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
-  },
-  featuredBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "white",
-  },
-  bookmarkBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  featuredCenter: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  playButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.4)",
-  },
-  featuredBottom: {},
-  featuredTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "white",
-    marginBottom: 4,
-  },
-  featuredSubtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderRadius: 2,
-    marginTop: 12,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: THEME.accent,
-    borderRadius: 2,
-  },
-  decorCircle1: {
-    position: "absolute",
-    top: 40,
-    right: 40,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(253,224,71,0.15)",
-  },
-  decorCircle2: {
-    position: "absolute",
-    bottom: -30,
-    right: -30,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(99,102,241,0.15)",
-  },
   // Section
   section: {
-    paddingHorizontal: 24,
-    marginBottom: 28,
+    paddingHorizontal: 20,
+    marginTop: 24,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -617,44 +698,135 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
+    color: "#0f172a",
   },
   seeAllText: {
     fontSize: 14,
-    fontWeight: "600",
     color: THEME.primary,
+    fontWeight: "600",
   },
-  // Course List
-  courseList: {
-    gap: 14,
+  // Header styles
+  headerLeft: {
+    flex: 1,
   },
-  courseCard: {
+  headerRight: {
+    flexShrink: 0,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: THEME.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  // Hero section
+  heroSection: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  heroTextNormal: {
+    fontSize: 20,
+    color: "#1f2937",
+    fontWeight: "500",
+  },
+  heroRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "white",
-    padding: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#f3f4f6",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+  },
+  heroTextHighlight: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: THEME.primary,
+  },
+  // Featured overlay
+  featuredOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "space-between",
+    padding: 16,
+  },
+  decorCircle1: {
+    position: "absolute",
+    top: -20,
+    right: -20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  decorCircle2: {
+    position: "absolute",
+    bottom: -30,
+    left: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  featuredTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  featuredBadge: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  featuredBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "white",
+  },
+  bookmarkBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  featuredCenter: {
+    alignItems: "center",
+  },
+  playButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.5)",
+  },
+  featuredBottom: {
+    alignItems: "flex-start",
+  },
+  featuredSubtitle: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 6,
+  },
+  // Course list and thumbnails
+  courseList: {
+    gap: 12,
   },
   thumbnailContainer: {
-    width: 80,
-    height: 56,
-    borderRadius: 12,
+    width: 90,
+    height: 60,
+    borderRadius: 8,
     overflow: "hidden",
-    marginRight: 14,
+    marginRight: 12,
   },
   thumbnail: {
     width: "100%",
     height: "100%",
   },
   thumbnailPlaceholder: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: THEME.primary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -668,28 +840,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   lectureCountText: {
-    fontSize: 9,
+    fontSize: 10,
+    fontWeight: "600",
     color: "white",
-    fontWeight: "600",
-  },
-  courseInfo: {
-    flex: 1,
-  },
-  courseTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  courseSubject: {
-    fontSize: 12,
-    color: "#6b7280",
   },
   courseProgressRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 8,
-    gap: 8,
   },
   courseProgressBar: {
     flex: 1,
@@ -697,25 +855,159 @@ const styles = StyleSheet.create({
     backgroundColor: "#e5e7eb",
     borderRadius: 2,
     overflow: "hidden",
+    marginRight: 8,
   },
   courseProgressFill: {
     height: "100%",
     backgroundColor: THEME.primary,
-    borderRadius: 2,
   },
   courseProgressText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: THEME.primary,
+    color: "#6b7280",
+    fontWeight: "500",
   },
   arrowContainer: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 8,
+  },
+  // Featured Course
+  featuredCard: {
+    marginHorizontal: 20,
+    height: 180,
+    backgroundColor: "#1e1e2e",
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  featuredImageContainer: {
+    height: 160,
+    backgroundColor: "#e2e8f0",
+  },
+  featuredImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  featuredGradient: {
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: THEME.primary,
+  },
+  featuredContent: {
+    padding: 16,
+  },
+  featuredTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginBottom: 6,
+  },
+  featuredDescription: {
+    fontSize: 14,
+    color: "#64748b",
+    lineHeight: 20,
+  },
+  featuredFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+  },
+  progressContainer: {
+    flex: 1,
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    marginBottom: 6,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: "#e2e8f0",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: THEME.primary,
+    borderRadius: 3,
+  },
+  continueBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: THEME.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  continueBtnText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+    marginRight: 4,
+  },
+  // Courses List
+  coursesList: {
+    gap: 12,
+  },
+  courseCard: {
+    flexDirection: "row",
+    backgroundColor: "white",
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  courseThumbnail: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  courseThumbnailImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+  },
+  courseInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  courseTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 4,
+  },
+  courseSubject: {
+    fontSize: 13,
+    color: "#64748b",
+    marginBottom: 8,
+  },
+  courseMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  courseMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  courseMetaText: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginLeft: 4,
   },
   // Empty State
   emptyState: {
@@ -775,5 +1067,259 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#374151",
+  },
+  // Exam Card
+  examCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "white",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#f3f4f6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  examCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  examIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#dbeafe",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  examInfo: {
+    flex: 1,
+  },
+  examTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  examMeta: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  examMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  examMetaText: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  examStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 4,
+    marginLeft: 8,
+  },
+  examStatusText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  // Schedule Styles
+  scheduleHighlight: {
+    marginBottom: 16,
+  },
+  currentClassCard: {
+    backgroundColor: THEME.primary,
+    padding: 16,
+    borderRadius: 16,
+  },
+  liveIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+    marginRight: 6,
+  },
+  liveText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 1,
+  },
+  currentClassSubject: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  currentClassMeta: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.8)",
+  },
+  nextClassCard: {
+    backgroundColor: "#fef3c7",
+    padding: 14,
+    borderRadius: 12,
+  },
+  nextClassLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#b45309",
+    marginBottom: 4,
+    letterSpacing: 1,
+  },
+  nextClassSubject: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#92400e",
+    marginBottom: 2,
+  },
+  nextClassMeta: {
+    fontSize: 12,
+    color: "#b45309",
+  },
+  scheduleList: {
+    gap: 8,
+  },
+  scheduleItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  scheduleItemActive: {
+    borderColor: THEME.primary,
+    borderWidth: 2,
+    backgroundColor: "#f0fdf4",
+  },
+  scheduleTime: {
+    width: 50,
+    marginRight: 12,
+  },
+  scheduleTimeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  scheduleTimeTextActive: {
+    color: THEME.primary,
+  },
+  scheduleDetails: {
+    flex: 1,
+  },
+  scheduleSubject: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 2,
+  },
+  scheduleSubjectActive: {
+    color: THEME.primary,
+  },
+  scheduleTeacher: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  ongoingBadge: {
+    backgroundColor: THEME.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  ongoingText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "white",
+    letterSpacing: 0.5,
+  },
+  // Current/Next Class Highlight Card
+  classHighlightCard: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: THEME.primary,
+    borderRadius: 16,
+    position: "relative",
+    overflow: "hidden",
+  },
+  liveClassIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  liveClassDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+    marginRight: 8,
+  },
+  liveClassLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 1,
+  },
+  liveClassSubject: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  liveClassMeta: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.85)",
+    marginBottom: 2,
+  },
+  liveClassTime: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+  },
+  nextClassIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 6,
+  },
+  nextClassLabelHighlight: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#f59e0b",
+    letterSpacing: 1,
+  },
+  nextUpSubject: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  nextUpMeta: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.8)",
+  },
+  classCardArrow: {
+    position: "absolute",
+    right: 16,
+    top: "50%",
+    marginTop: -9,
+    opacity: 0.7,
   },
 });
