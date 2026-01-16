@@ -1,8 +1,9 @@
-import { getLiveSchedule, LiveScheduleResponse } from "@/lib/enhancedApi";
+import { apiFetch } from "@/lib/api";
+import { getInstituteSchedule, getLiveSchedule, LiveScheduleResponse, ScheduleItem } from "@/lib/enhancedApi";
 import { Ionicons } from "@expo/vector-icons";
 import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -22,47 +23,163 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function TeacherScheduleScreen() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [liveData, setLiveData] = useState<LiveScheduleResponse | null>(null);
+  
+  // Core state
   const [selectedDay, setSelectedDay] = useState(new Date().getDay());
-  const notificationListener = useRef<Notifications.Subscription>();
-
-  const loadData = async () => {
+  const [viewMode, setViewMode] = useState<'my' | 'all'>('my');
+  
+  // Loading states
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Separate data states for each view mode
+  const [myScheduleData, setMyScheduleData] = useState<ScheduleItem[]>([]);
+  const [instituteScheduleData, setInstituteScheduleData] = useState<ScheduleItem[]>([]);
+  const [liveData, setLiveData] = useState<LiveScheduleResponse | null>(null);
+  
+  // Get schedule data based on view mode
+  const scheduleData = viewMode === 'my' ? myScheduleData : instituteScheduleData;
+  
+  // Refs
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+  const lastFetchKey = useRef<string>('');
+  
+  // Calculate dates for the week (for display in day selector)
+  const weekDates = useMemo(() => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    return DAYS.map((_, index) => {
+      const diff = index - currentDay;
+      const date = new Date(today);
+      date.setDate(today.getDate() + diff);
+      return date;
+    });
+  }, []);
+  
+  // Calculate the date for the selected day
+  const targetDate = useMemo(() => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const diff = selectedDay - currentDay;
+    const date = new Date(today);
+    date.setDate(today.getDate() + diff);
+    return date;
+  }, [selectedDay]);
+  
+  const targetDateStr = useMemo(() => targetDate.toISOString().split('T')[0], [targetDate]);
+  
+  // Format date for display
+  const formatDisplayDate = (date: Date) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return {
+      dayName: fullDays[date.getDay()],
+      monthDay: `${months[date.getMonth()]} ${date.getDate()}`,
+      dayNumber: date.getDate(),
+    };
+  };
+  
+  const fetchKey = useMemo(() => `${selectedDay}-${viewMode}`, [selectedDay, viewMode]);
+  
+  // Fetch schedule data
+  const fetchScheduleData = useCallback(async (isRefresh = false) => {
+    const key = `${selectedDay}-${viewMode}`;
+    
+    if (!isRefresh && isFetching && lastFetchKey.current === key) {
+      return;
+    }
+    
+    lastFetchKey.current = key;
+    
+    if (!isRefresh) {
+      setIsFetching(true);
+    }
+    
     try {
-      const data = await getLiveSchedule();
-      setLiveData(data);
+      const isToday = selectedDay === new Date().getDay();
+      
+      if (viewMode === 'all') {
+        // Institute-wide schedule
+        try {
+          const data = await getInstituteSchedule(targetDateStr);
+          setInstituteScheduleData(data || []);
+        } catch (e) {
+          console.log('Error fetching institute schedule:', e);
+          setInstituteScheduleData([]);
+        }
+      } else {
+        // My Classes
+        if (isToday) {
+          try {
+            const live = await getLiveSchedule();
+            setLiveData(live);
+            if (live?.todaySchedule) {
+              setMyScheduleData(live.todaySchedule);
+            }
+          } catch (e) {
+            console.log('Error fetching live data:', e);
+          }
+        } else {
+          try {
+            const data = await apiFetch(`/api/schedule/day-view?date=${targetDateStr}`) as ScheduleItem[];
+            setMyScheduleData(data || []);
+          } catch (e) {
+            console.log('Error fetching day schedules:', e);
+            setMyScheduleData([]);
+          }
+        }
+      }
     } catch (error) {
       console.error("Error loading schedule:", error);
     } finally {
-      setLoading(false);
+      setIsInitialLoading(false);
+      setIsFetching(false);
       setRefreshing(false);
     }
-  };
-
+  }, [selectedDay, viewMode, targetDateStr, isFetching]);
+  
+  // Initial load and when parameters change
   useEffect(() => {
-    loadData();
+    fetchScheduleData();
+  }, [fetchKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // Setup notification listener and periodic refresh
+  useEffect(() => {
+    try {
+      notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+        const data = notification.request.content.data;
+        if (data && data.type === 'schedule_update') {
+          fetchScheduleData(true);
+        }
+      });
+    } catch {
+      console.log('Push notifications not available in Expo Go');
+    }
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      const data = notification.request.content.data;
-      if (data && data.type === 'schedule_update') {
-        loadData();
-      }
-    });
+    const refreshInterval = setInterval(() => {
+      fetchScheduleData(true);
+    }, 60000);
 
     return () => {
+      clearInterval(refreshInterval);
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current.remove();
       }
     };
-  }, []);
-
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadData();
-  }, []);
+    fetchScheduleData(true);
+  }, [fetchScheduleData]);
+  
+  // Determine if we should show live banner
+  const isToday = selectedDay === new Date().getDay();
+  const currentClass = isToday ? liveData?.currentClass : null;
+  const nextClass = isToday ? liveData?.nextClass : null;
 
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
@@ -71,10 +188,6 @@ export default function TeacherScheduleScreen() {
       </SafeAreaView>
     );
   }
-
-  const todaySchedule = liveData?.todaySchedule || [];
-  const currentClass = liveData?.currentClass;
-  const nextClass = liveData?.nextClass;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -95,15 +208,56 @@ export default function TeacherScheduleScreen() {
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#1f2937" />
           </Pressable>
-          <Text style={styles.headerTitle}>My Teaching Schedule</Text>
+          <Text style={styles.headerTitle}>
+            {viewMode === 'my' ? 'My Classes' : 'Institute Schedule'}
+          </Text>
           <View style={{ width: 40 }} />
+        </View>
+
+        {/* View Mode Toggle */}
+        <View style={styles.viewToggleContainer}>
+          <Pressable
+            onPress={() => setViewMode('my')}
+            style={[
+              styles.viewToggleButton,
+              viewMode === 'my' && styles.viewToggleButtonActive
+            ]}
+          >
+            <Ionicons 
+              name="person" 
+              size={16} 
+              color={viewMode === 'my' ? 'white' : '#6b7280'} 
+            />
+            <Text style={[
+              styles.viewToggleText,
+              viewMode === 'my' && styles.viewToggleTextActive
+            ]}>My Classes</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setViewMode('all')}
+            style={[
+              styles.viewToggleButton,
+              viewMode === 'all' && styles.viewToggleButtonActive
+            ]}
+          >
+            <Ionicons 
+              name="business" 
+              size={16} 
+              color={viewMode === 'all' ? 'white' : '#6b7280'} 
+            />
+            <Text style={[
+              styles.viewToggleText,
+              viewMode === 'all' && styles.viewToggleTextActive
+            ]}>Institute</Text>
+          </Pressable>
         </View>
 
         {/* Day Selector */}
         <View style={styles.daySelector}>
           {DAYS.map((day, index) => {
-            const isToday = index === new Date().getDay();
+            const isTodayIndex = index === new Date().getDay();
             const isSelected = index === selectedDay;
+            const dateNum = weekDates[index].getDate();
             return (
               <Pressable
                 key={day}
@@ -111,23 +265,38 @@ export default function TeacherScheduleScreen() {
                 style={[
                   styles.dayButton,
                   isSelected && styles.dayButtonActive,
-                  isToday && !isSelected && styles.dayButtonToday
+                  isTodayIndex && !isSelected && styles.dayButtonToday
                 ]}
               >
                 <Text style={[
                   styles.dayText,
                   isSelected && styles.dayTextActive,
-                  isToday && !isSelected && styles.dayTextToday
+                  isTodayIndex && !isSelected && styles.dayTextToday
                 ]}>
                   {day}
+                </Text>
+                <Text style={[
+                  styles.dateNum,
+                  isSelected && styles.dateNumActive,
+                  isTodayIndex && !isSelected && styles.dateNumToday
+                ]}>
+                  {dateNum}
                 </Text>
               </Pressable>
             );
           })}
         </View>
 
+        {/* Fetching indicator */}
+        {isFetching && !refreshing && (
+          <View style={styles.fetchingIndicator}>
+            <ActivityIndicator size="small" color={THEME.primary} />
+            <Text style={styles.fetchingText}>Updating...</Text>
+          </View>
+        )}
+
         {/* Current Class Highlight */}
-        {currentClass && selectedDay === new Date().getDay() && (
+        {currentClass && isToday && (
           <View style={styles.highlightSection}>
             <View style={styles.currentCard}>
               <View style={styles.liveRow}>
@@ -146,7 +315,7 @@ export default function TeacherScheduleScreen() {
         )}
 
         {/* Next Class */}
-        {nextClass && !currentClass && selectedDay === new Date().getDay() && (
+        {nextClass && !currentClass && isToday && (
           <View style={styles.highlightSection}>
             <View style={styles.nextCard}>
               <Text style={styles.nextLabel}>NEXT CLASS</Text>
@@ -161,27 +330,36 @@ export default function TeacherScheduleScreen() {
         {/* Schedule List */}
         <View style={styles.scheduleSection}>
           <Text style={styles.sectionTitle}>
-            {selectedDay === new Date().getDay() ? "Today's Classes" : `${DAYS[selectedDay]} Classes`}
+            {isToday 
+              ? `Today's Classes • ${formatDisplayDate(targetDate).monthDay}` 
+              : `${formatDisplayDate(targetDate).dayName}, ${formatDisplayDate(targetDate).monthDay}`
+            }
           </Text>
           
-          {todaySchedule.length === 0 ? (
+          {scheduleData.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={48} color="#d1d5db" />
               <Text style={styles.emptyText}>No classes assigned</Text>
             </View>
           ) : (
             <View style={styles.scheduleList}>
-              {todaySchedule.map((item, index) => {
-                const isCurrent = liveData?.currentSlot === item.startTimeSlot;
+              {scheduleData.map((item, index) => {
+                const isCurrent = liveData?.currentSlot === item.startTimeSlot && isToday;
+                const isCustom = item.scheduleType === 'custom';
+                
                 return (
-                  <View key={item._id || index} style={styles.scheduleItem}>
+                  <View key={item._id || `schedule-${index}`} style={styles.scheduleItem}>
                     <View style={styles.timeColumn}>
                       <Text style={[styles.timeText, isCurrent && styles.timeTextActive]}>
                         {item.startTimeSlot}
                       </Text>
                       <Text style={styles.timeEndText}>{item.endTimeSlot}</Text>
                     </View>
-                    <View style={[styles.scheduleCard, isCurrent && styles.scheduleCardActive]}>
+                    <View style={[
+                      styles.scheduleCard, 
+                      isCurrent && styles.scheduleCardActive,
+                      isCustom && styles.scheduleCardCustom
+                    ]}>
                       <View style={styles.scheduleCardHeader}>
                         <Text style={[styles.subjectText, isCurrent && styles.subjectTextActive]}>
                           {item.subject}
@@ -189,6 +367,11 @@ export default function TeacherScheduleScreen() {
                         {isCurrent && (
                           <View style={styles.ongoingBadge}>
                             <Text style={styles.ongoingText}>ONGOING</Text>
+                          </View>
+                        )}
+                        {isCustom && !isCurrent && (
+                          <View style={styles.customBadge}>
+                            <Text style={styles.customBadgeText}>Special</Text>
                           </View>
                         )}
                       </View>
@@ -225,6 +408,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  fetchingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#f0fdf4',
+    gap: 8,
+  },
+  fetchingText: {
+    fontSize: 12,
+    color: THEME.primary,
   },
   header: {
     flexDirection: "row",
@@ -278,6 +473,18 @@ const styles = StyleSheet.create({
     color: "white",
   },
   dayTextToday: {
+    color: THEME.primary,
+  },
+  dateNum: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#374151",
+    marginTop: 2,
+  },
+  dateNumActive: {
+    color: "white",
+  },
+  dateNumToday: {
     color: THEME.primary,
   },
   highlightSection: {
@@ -397,6 +604,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     backgroundColor: "#f0fdf4",
   },
+  scheduleCardCustom: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
   scheduleCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -423,6 +634,19 @@ const styles = StyleSheet.create({
     color: "white",
     letterSpacing: 0.5,
   },
+  customBadge: {
+    backgroundColor: '#fffbeb',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+  },
+  customBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#d97706',
+  },
   scheduleCardMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -435,5 +659,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6b7280",
     fontWeight: "500",
+  },
+  // View Mode Toggle
+  viewToggleContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'white',
+    gap: 8,
+  },
+  viewToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#f3f4f6',
+    gap: 6,
+  },
+  viewToggleButtonActive: {
+    backgroundColor: THEME.primary,
+  },
+  viewToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  viewToggleTextActive: {
+    color: 'white',
   },
 });

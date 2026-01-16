@@ -1,26 +1,26 @@
 import { useRouter } from "expo-router";
 import {
-  Award,
-  BarChart3,
-  Bell,
-  CheckCircle2,
-  ChevronRight,
-  FolderOpen,
-  HelpCircle,
-  LogOut,
-  Megaphone,
-  Settings,
-  User,
-  Users,
+    Award,
+    BarChart3,
+    Bell,
+    CheckCircle2,
+    ChevronRight,
+    FolderOpen,
+    HelpCircle,
+    LogOut,
+    Megaphone,
+    Settings,
+    User,
+    Users
 } from "lucide-react-native";
 import React from "react";
 import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -47,6 +47,15 @@ const MENU_CATEGORIES: MenuCategory[] = [
   {
     title: "Classroom",
     items: [
+      {
+        id: "schedule",
+        title: "Class Schedule",
+        subtitle: "View your teaching schedule",
+        icon: FolderOpen,
+        iconColor: "#ec4899",
+        bgColor: "#fce7f3",
+        route: "/(teacher)/more/schedule",
+      },
       {
         id: "students",
         title: "Students",

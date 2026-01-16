@@ -1,4 +1,5 @@
 import WelcomeTutorial from "@/components/WelcomeTutorial";
+import { apiFetch } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { Course, getEnrolledCourses, getLiveSchedule, LiveScheduleResponse } from "@/lib/enhancedApi";
 import { getAssignedExams } from "@/lib/studentApi";
@@ -8,14 +9,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View
+    ActivityIndicator,
+    Image,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
 } from "react-native";
 
 // Rich green theme colors
@@ -97,7 +98,7 @@ export default function StudentHome() {
 
   const loadData = async () => {
     try {
-      const [userData, courses, storedImage, examsData, scheduleData] = await Promise.all([
+      const [cachedUserData, courses, storedImage, examsData, scheduleData] = await Promise.all([
         getUser(),
         getEnrolledCourses().catch(() => []),
         AsyncStorage.getItem("profile_image"),
@@ -106,6 +107,22 @@ export default function StudentHome() {
       ]);
       
       setLiveSchedule(scheduleData);
+
+      // Try to fetch fresh user data from server
+      let userData = cachedUserData;
+      try {
+        const freshUserData = await apiFetch('/api/auth/me') as any;
+        if (freshUserData) {
+          userData = freshUserData;
+          // Update cached user data with fresh data
+          if (userData) {
+            await setUser(userData);
+          }
+        }
+      } catch {
+        // Use cached data if server fetch fails
+        console.log('Using cached user data');
+      }
 
       const hasSeenTutorial = await AsyncStorage.getItem("has_seen_welcome_tutorial");
       

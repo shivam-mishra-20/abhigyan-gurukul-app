@@ -254,8 +254,9 @@ export async function getSchedule(filters?: {
   return apiFetch(url) as Promise<ScheduleItem[]>;
 }
 
-export async function getTodaySchedule(): Promise<ScheduleItem[]> {
-  return apiFetch('/api/schedule/today') as Promise<ScheduleItem[]>;
+export async function getDaySchedule(date?: string): Promise<ScheduleItem[]> {
+  const url = date ? `/api/schedule/day-view?date=${date}` : '/api/schedule/day-view';
+  return apiFetch(url) as Promise<ScheduleItem[]>;
 }
 
 export async function getLiveSchedule(): Promise<LiveScheduleResponse> {
@@ -264,6 +265,11 @@ export async function getLiveSchedule(): Promise<LiveScheduleResponse> {
 
 export async function getUpcomingSchedule(limit?: number): Promise<ScheduleItem[]> {
   const url = limit ? `/api/schedule/upcoming?limit=${limit}` : '/api/schedule/upcoming';
+  return apiFetch(url) as Promise<ScheduleItem[]>;
+}
+
+export async function getInstituteSchedule(date?: string): Promise<ScheduleItem[]> {
+  const url = date ? `/api/schedule/institute-view?date=${date}` : `/api/schedule/institute-view`;
   return apiFetch(url) as Promise<ScheduleItem[]>;
 }
 

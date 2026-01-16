@@ -15,6 +15,7 @@ const MENU_SECTIONS = [
     items: [
       { id: "exams", title: "Online Exams", icon: "document-text", route: "/(student)/modules/exams", color: "#3b82f6" },
       { id: "results", title: "Results", icon: "trophy", route: "/(student)/modules/results", color: "#f59e0b" },
+      { id: "offline-results", title: "Offline Results", icon: "clipboard", route: "/(student)/modules/offline-results", color: "#14b8a6" },
       { id: "materials", title: "Study Materials", icon: "folder-open", route: "/(student)/modules/materials", color: "#8b5cf6" },
     ]
   },
