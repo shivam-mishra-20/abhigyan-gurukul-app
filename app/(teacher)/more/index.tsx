@@ -11,7 +11,7 @@ import {
     Megaphone,
     Settings,
     User,
-    Users
+    Users,
 } from "lucide-react-native";
 import React from "react";
 import {
@@ -66,13 +66,13 @@ const MENU_CATEGORIES: MenuCategory[] = [
         route: "/(teacher)/students",
       },
       {
-        id: "batches",
-        title: "Batches",
-        subtitle: "Organize into groups",
+        id: "attendance",
+        title: "My Attendance",
+        subtitle: "View your attendance records",
         icon: FolderOpen,
         iconColor: "#8b5cf6",
         bgColor: "#ede9fe",
-        route: "/(teacher)/more/batches",
+        route: "/(teacher)/more/attendance",
       },
       {
         id: "offline-results",
@@ -205,9 +205,7 @@ export default function MoreScreen() {
               <User size={28} color="#059669" strokeWidth={2} />
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>
-                {user?.name || "Teacher"}
-              </Text>
+              <Text style={styles.profileName}>{user?.name || "Teacher"}</Text>
               <Text style={styles.profileEmail}>
                 {user?.email || "teacher@example.com"}
               </Text>
@@ -229,7 +227,8 @@ export default function MoreScreen() {
                     onPress={() => navigateTo(item.route)}
                     style={[
                       styles.menuItem,
-                      index < category.items.length - 1 && styles.menuItemBorder,
+                      index < category.items.length - 1 &&
+                        styles.menuItemBorder,
                     ]}
                   >
                     <View

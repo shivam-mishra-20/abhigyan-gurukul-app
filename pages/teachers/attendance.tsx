@@ -1,19 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { apiFetch } from "@/lib/api";
 import { useAppTheme } from "@/lib/context";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
+    ActivityIndicator,
+    Modal,
+    Platform,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    View,
 } from "react-native";
 
 interface AttendanceRecord {
@@ -46,8 +44,7 @@ interface AttendanceResponse {
 
 type ViewMode = "month" | "date";
 
-export default function AttendanceScreen() {
-  const router = useRouter();
+export default function TeacherAttendance() {
   const { isDark } = useAppTheme();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,6 +96,35 @@ export default function AttendanceScreen() {
     });
   };
 
+  const getStatusColor = (status: string, forDark: boolean) => {
+    switch (status) {
+      case "present":
+        return {
+          bg: forDark ? "#065f46" : "#d1fae5",
+          text: forDark ? "#6ee7b7" : "#047857",
+          icon: "checkmark-circle",
+        };
+      case "absent":
+        return {
+          bg: forDark ? "#7f1d1d" : "#fee2e2",
+          text: forDark ? "#fca5a5" : "#b91c1c",
+          icon: "close-circle",
+        };
+      case "late":
+        return {
+          bg: forDark ? "#78350f" : "#fef3c7",
+          text: forDark ? "#fcd34d" : "#b45309",
+          icon: "time",
+        };
+      default:
+        return {
+          bg: forDark ? "#374151" : "#f3f4f6",
+          text: forDark ? "#d1d5db" : "#4b5563",
+          icon: "help-circle",
+        };
+    }
+  };
+
   const months = [
     "January",
     "February",
@@ -131,7 +157,7 @@ export default function AttendanceScreen() {
           backgroundColor: isDark ? "#111827" : "#ffffff",
         }}
       >
-        <ActivityIndicator size="large" color="#059669" />
+        <ActivityIndicator size="large" color="#8b5cf6" />
       </View>
     );
   }
@@ -142,35 +168,17 @@ export default function AttendanceScreen() {
       <View
         style={{
           paddingTop: 56,
-          paddingBottom: 20,
-          paddingHorizontal: 20,
-          backgroundColor: isDark ? "#065f46" : "#059669",
-          flexDirection: "row",
-          alignItems: "center",
+          paddingBottom: 24,
+          paddingHorizontal: 24,
+          backgroundColor: isDark ? "#5b21b6" : "#7c3aed",
         }}
       >
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 12,
-            backgroundColor: "rgba(255,255,255,0.2)",
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 14,
-          }}
-        >
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: "#fff", fontSize: 22, fontWeight: "700" }}>
-            My Attendance
-          </Text>
-          <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>
-            {data?.user?.name || "Student"} • #{data?.user?.empCode || "N/A"}
-          </Text>
-        </View>
+        <Text style={{ color: "#fff", fontSize: 24, fontWeight: "700" }}>
+          My Attendance
+        </Text>
+        <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 14 }}>
+          {data?.user?.name || "Teacher"} • #{data?.user?.empCode || "N/A"}
+        </Text>
       </View>
 
       <ScrollView
@@ -182,12 +190,12 @@ export default function AttendanceScreen() {
               setRefreshing(true);
               fetchAttendance();
             }}
-            colors={["#059669"]}
+            colors={["#8b5cf6"]}
           />
         }
       >
         {/* View Mode Toggle */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
           <View
             style={{
               flexDirection: "row",
@@ -203,7 +211,11 @@ export default function AttendanceScreen() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 backgroundColor:
-                  viewMode === "month" ? "#059669" : "transparent",
+                  viewMode === "month"
+                    ? isDark
+                      ? "#7c3aed"
+                      : "#7c3aed"
+                    : "transparent",
                 alignItems: "center",
               }}
             >
@@ -229,7 +241,11 @@ export default function AttendanceScreen() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 backgroundColor:
-                  viewMode === "date" ? "#059669" : "transparent",
+                  viewMode === "date"
+                    ? isDark
+                      ? "#7c3aed"
+                      : "#7c3aed"
+                    : "transparent",
                 alignItems: "center",
               }}
             >
@@ -253,7 +269,7 @@ export default function AttendanceScreen() {
 
         {/* Month or Date Selector */}
         {viewMode === "month" ? (
-          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+          <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {months.map((month, index) => (
@@ -266,7 +282,7 @@ export default function AttendanceScreen() {
                       borderRadius: 20,
                       backgroundColor:
                         selectedMonth === index + 1
-                          ? "#059669"
+                          ? "#7c3aed"
                           : isDark
                             ? "#1f2937"
                             : "#ffffff",
@@ -294,7 +310,7 @@ export default function AttendanceScreen() {
             </ScrollView>
           </View>
         ) : (
-          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+          <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
             <Pressable
               onPress={() => setShowDatePicker(true)}
               style={{
@@ -310,7 +326,7 @@ export default function AttendanceScreen() {
               <Ionicons
                 name="calendar"
                 size={24}
-                color={isDark ? "#34d399" : "#059669"}
+                color={isDark ? "#a78bfa" : "#7c3aed"}
               />
               <Text
                 style={{
@@ -359,7 +375,7 @@ export default function AttendanceScreen() {
                     <Pressable
                       onPress={() => setShowDatePicker(false)}
                       style={{
-                        backgroundColor: "#059669",
+                        backgroundColor: "#7c3aed",
                         padding: 12,
                         borderRadius: 8,
                         alignItems: "center",
@@ -378,30 +394,30 @@ export default function AttendanceScreen() {
         )}
 
         {/* Stats Cards */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
-          <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
             {/* Present */}
             <View
               style={{
                 flex: 1,
                 backgroundColor: isDark ? "#064e3b" : "#ecfdf5",
-                borderRadius: 14,
-                padding: 14,
+                borderRadius: 16,
+                padding: 16,
                 borderWidth: 1,
                 borderColor: isDark ? "#065f46" : "#a7f3d0",
               }}
             >
               <Ionicons
                 name="checkmark-circle"
-                size={26}
+                size={28}
                 color={isDark ? "#34d399" : "#059669"}
               />
               <Text
                 style={{
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: "700",
                   color: isDark ? "#34d399" : "#047857",
-                  marginTop: 6,
+                  marginTop: 8,
                 }}
               >
                 {data?.stats?.present || 0}
@@ -409,7 +425,7 @@ export default function AttendanceScreen() {
               <Text
                 style={{
                   color: isDark ? "#6ee7b7" : "#059669",
-                  fontSize: 12,
+                  fontSize: 13,
                 }}
               >
                 Present
@@ -420,23 +436,23 @@ export default function AttendanceScreen() {
               style={{
                 flex: 1,
                 backgroundColor: isDark ? "#7f1d1d" : "#fef2f2",
-                borderRadius: 14,
-                padding: 14,
+                borderRadius: 16,
+                padding: 16,
                 borderWidth: 1,
                 borderColor: isDark ? "#991b1b" : "#fecaca",
               }}
             >
               <Ionicons
                 name="close-circle"
-                size={26}
+                size={28}
                 color={isDark ? "#f87171" : "#dc2626"}
               />
               <Text
                 style={{
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: "700",
                   color: isDark ? "#f87171" : "#b91c1c",
-                  marginTop: 6,
+                  marginTop: 8,
                 }}
               >
                 {data?.stats?.absent || 0}
@@ -444,7 +460,7 @@ export default function AttendanceScreen() {
               <Text
                 style={{
                   color: isDark ? "#fca5a5" : "#dc2626",
-                  fontSize: 12,
+                  fontSize: 13,
                 }}
               >
                 Absent
@@ -455,23 +471,23 @@ export default function AttendanceScreen() {
               style={{
                 flex: 1,
                 backgroundColor: isDark ? "#78350f" : "#fffbeb",
-                borderRadius: 14,
-                padding: 14,
+                borderRadius: 16,
+                padding: 16,
                 borderWidth: 1,
                 borderColor: isDark ? "#92400e" : "#fde68a",
               }}
             >
               <Ionicons
                 name="time"
-                size={26}
+                size={28}
                 color={isDark ? "#fbbf24" : "#d97706"}
               />
               <Text
                 style={{
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: "700",
                   color: isDark ? "#fbbf24" : "#b45309",
-                  marginTop: 6,
+                  marginTop: 8,
                 }}
               >
                 {data?.stats?.late || 0}
@@ -479,7 +495,7 @@ export default function AttendanceScreen() {
               <Text
                 style={{
                   color: isDark ? "#fcd34d" : "#d97706",
-                  fontSize: 12,
+                  fontSize: 13,
                 }}
               >
                 Late
@@ -490,11 +506,11 @@ export default function AttendanceScreen() {
 
         {/* Attendance Records */}
         <View
-          style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
+          style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32 }}
         >
           <Text
             style={{
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: "700",
               color: isDark ? "#f3f4f6" : "#111827",
               marginBottom: 12,
@@ -509,23 +525,23 @@ export default function AttendanceScreen() {
             <View
               style={{
                 alignItems: "center",
-                paddingVertical: 40,
+                paddingVertical: 48,
                 backgroundColor: isDark ? "#1f2937" : "#ffffff",
-                borderRadius: 14,
+                borderRadius: 16,
                 borderWidth: 1,
                 borderColor: isDark ? "#374151" : "#e5e7eb",
               }}
             >
               <Ionicons
                 name="calendar-outline"
-                size={56}
+                size={64}
                 color={isDark ? "#4b5563" : "#d1d5db"}
               />
               <Text
                 style={{
                   color: isDark ? "#9ca3af" : "#6b7280",
-                  fontSize: 16,
-                  marginTop: 12,
+                  fontSize: 18,
+                  marginTop: 16,
                 }}
               >
                 No attendance records
@@ -533,10 +549,10 @@ export default function AttendanceScreen() {
               <Text
                 style={{
                   color: isDark ? "#6b7280" : "#9ca3af",
-                  fontSize: 13,
-                  marginTop: 6,
+                  fontSize: 14,
+                  marginTop: 8,
                   textAlign: "center",
-                  paddingHorizontal: 24,
+                  paddingHorizontal: 32,
                 }}
               >
                 {viewMode === "date"
@@ -548,57 +564,31 @@ export default function AttendanceScreen() {
             <View
               style={{
                 backgroundColor: isDark ? "#1f2937" : "#ffffff",
-                borderRadius: 14,
+                borderRadius: 16,
                 overflow: "hidden",
                 borderWidth: 1,
                 borderColor: isDark ? "#374151" : "#e5e7eb",
               }}
             >
               {data.records.map((record, index) => {
-                const isPresent =
-                  record.status === "present" ||
-                  (record.clockIn && record.clockIn !== "--:--");
-                const isLate = record.status === "late";
-                const statusBg = isPresent
-                  ? isDark
-                    ? "#065f46"
-                    : "#d1fae5"
-                  : isLate
-                    ? isDark
-                      ? "#78350f"
-                      : "#fef3c7"
-                    : isDark
-                      ? "#7f1d1d"
-                      : "#fee2e2";
-                const statusColor = isPresent
-                  ? isDark
-                    ? "#6ee7b7"
-                    : "#047857"
-                  : isLate
-                    ? isDark
-                      ? "#fcd34d"
-                      : "#b45309"
-                    : isDark
-                      ? "#fca5a5"
-                      : "#b91c1c";
-
+                const statusStyle = getStatusColor(record.status, isDark);
                 return (
                   <View
                     key={record.id}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      padding: 14,
+                      padding: 16,
                       borderBottomWidth:
                         index < data.records.length - 1 ? 1 : 0,
                       borderBottomColor: isDark ? "#374151" : "#f3f4f6",
                     }}
                   >
-                    {/* Date */}
-                    <View style={{ marginRight: 14, minWidth: 70 }}>
+                    {/* Date Column */}
+                    <View style={{ marginRight: 16 }}>
                       <Text
                         style={{
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: "600",
                           color: isDark ? "#f3f4f6" : "#111827",
                         }}
@@ -607,20 +597,21 @@ export default function AttendanceScreen() {
                       </Text>
                     </View>
 
-                    {/* Clock In/Out */}
+                    {/* Clock In/Out - Admin Style */}
                     <View
                       style={{
                         flex: 1,
                         flexDirection: "row",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: 12,
+                        gap: 16,
                       }}
                     >
+                      {/* Clock In */}
                       <View style={{ alignItems: "center" }}>
                         <Text
                           style={{
-                            fontSize: 9,
+                            fontSize: 10,
                             color: isDark ? "#9ca3af" : "#6b7280",
                             marginBottom: 2,
                           }}
@@ -629,7 +620,7 @@ export default function AttendanceScreen() {
                         </Text>
                         <Text
                           style={{
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: "700",
                             fontFamily:
                               Platform.OS === "ios" ? "Menlo" : "monospace",
@@ -646,19 +637,21 @@ export default function AttendanceScreen() {
                         </Text>
                       </View>
 
+                      {/* Separator */}
                       <Text
                         style={{
-                          fontSize: 16,
+                          fontSize: 18,
                           color: isDark ? "#4b5563" : "#d1d5db",
                         }}
                       >
                         →
                       </Text>
 
+                      {/* Clock Out */}
                       <View style={{ alignItems: "center" }}>
                         <Text
                           style={{
-                            fontSize: 9,
+                            fontSize: 10,
                             color: isDark ? "#9ca3af" : "#6b7280",
                             marginBottom: 2,
                           }}
@@ -667,7 +660,7 @@ export default function AttendanceScreen() {
                         </Text>
                         <Text
                           style={{
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: "700",
                             fontFamily:
                               Platform.OS === "ios" ? "Menlo" : "monospace",
@@ -688,15 +681,15 @@ export default function AttendanceScreen() {
                     {/* Status Badge */}
                     <View
                       style={{
-                        backgroundColor: statusBg,
+                        backgroundColor: statusStyle.bg,
                         paddingHorizontal: 10,
                         paddingVertical: 4,
-                        borderRadius: 10,
+                        borderRadius: 12,
                       }}
                     >
                       <Text
                         style={{
-                          color: statusColor,
+                          color: statusStyle.text,
                           fontSize: 11,
                           fontWeight: "600",
                           textTransform: "capitalize",
