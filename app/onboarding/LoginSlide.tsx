@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -31,6 +34,33 @@ export default function LoginSlide({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoScale, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, logoScale, slideAnim]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -67,171 +97,472 @@ export default function LoginSlide({
   };
 
   return (
-    <View className="flex-1" style={{ width: SCREEN_WIDTH }}>
+    <View style={[styles.container, { width: SCREEN_WIDTH }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1"
+        style={styles.flex}
         keyboardVerticalOffset={0}
       >
         <ScrollView
-          className="flex-1 bg-gray-50"
-          contentContainerStyle={{ flexGrow: 1 }}
+          style={styles.flex}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View className="flex-1 items-center justify-center px-6 py-8">
-            {/* Login Form Card */}
-            <View className="w-full bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <Text className="text-gray-900 text-xl font-bold mb-6 text-center">
-                Welcome Back!
-              </Text>
+          {/* Logo Section */}
+          <Animated.View
+            style={[
+              styles.logoContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: logoScale }],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={["#10B981", "#059669"]}
+              style={styles.logoGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="school" size={40} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={styles.logoTitle}>Abhigyan Gurukul</Text>
+            <Text style={styles.logoSubtitle}>Excellence in Education</Text>
+          </Animated.View>
 
-              {/* Email Field */}
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </Text>
-                <View className="flex-row items-center bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
-                  <Ionicons name="mail-outline" size={20} color="#9CA3AF" />
-                  <TextInput
-                    className="flex-1 ml-3 text-base text-gray-900"
-                    placeholder="your@email.com"
-                    placeholderTextColor="#9CA3AF"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
+          {/* Login Form Card */}
+          <Animated.View
+            style={[
+              styles.formCard,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* Welcome Text */}
+            <View style={styles.welcomeContainer}>
+              <Text style={styles.welcomeTitle}>Welcome Back!</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Sign in to continue your learning journey
+              </Text>
+            </View>
+
+            {/* Email Field */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  focusedInput === "email" && styles.inputFocused,
+                ]}
+              >
+                <View style={styles.inputIconContainer}>
+                  <Ionicons
+                    name="mail-outline"
+                    size={20}
+                    color={focusedInput === "email" ? "#10B981" : "#94A3B8"}
                   />
                 </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="your@email.com"
+                  placeholderTextColor="#94A3B8"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                  onFocus={() => setFocusedInput("email")}
+                  onBlur={() => setFocusedInput(null)}
+                />
               </View>
+            </View>
 
-              {/* Password Field */}
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </Text>
-                <View className="flex-row items-center bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+            {/* Password Field */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  focusedInput === "password" && styles.inputFocused,
+                ]}
+              >
+                <View style={styles.inputIconContainer}>
                   <Ionicons
                     name="lock-closed-outline"
                     size={20}
-                    color="#9CA3AF"
+                    color={focusedInput === "password" ? "#10B981" : "#94A3B8"}
                   />
-                  <TextInput
-                    className="flex-1 ml-3 text-base text-gray-900"
-                    placeholder="Enter your password"
-                    placeholderTextColor="#9CA3AF"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
-                  />
-                  <Pressable onPress={() => setShowPassword(!showPassword)}>
-                    <Ionicons
-                      name={showPassword ? "eye-outline" : "eye-off-outline"}
-                      size={20}
-                      color="#9CA3AF"
-                    />
-                  </Pressable>
                 </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#94A3B8"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                  onFocus={() => setFocusedInput("password")}
+                  onBlur={() => setFocusedInput(null)}
+                />
+                <Pressable
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color="#94A3B8"
+                  />
+                </Pressable>
               </View>
+            </View>
 
-              {/* Error Message */}
-              {error ? (
-                <View className="mb-4">
-                  <View className="bg-red-50 rounded-lg p-3 flex-row items-center">
-                    <Ionicons name="alert-circle" size={16} color="#ef4444" />
-                    <Text className="text-red-500 text-sm ml-2 flex-1">
-                      {error}
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
+            {/* Error Message */}
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-              {/* Login Button */}
-              <Pressable
-                onPress={handleLogin}
-                disabled={loading}
-                className="bg-green-500 rounded-full py-4 items-center justify-center shadow-lg mb-3"
-                style={{
-                  shadowColor: "#22c55e",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 6,
-                }}
+            {/* Login Button */}
+            <Pressable
+              onPress={handleLogin}
+              disabled={loading}
+              style={({ pressed }) => [
+                styles.loginButton,
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <LinearGradient
+                colors={
+                  loading ? ["#9CA3B8", "#94A3B8"] : ["#10B981", "#059669"]
+                }
+                style={styles.buttonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
               >
                 {loading ? (
-                  <ActivityIndicator color="white" />
+                  <ActivityIndicator color="white" size="small" />
                 ) : (
-                  <Text className="text-white text-lg font-semibold">
-                    Login
-                  </Text>
+                  <>
+                    <Text style={styles.loginButtonText}>Sign In</Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={20}
+                      color="#FFFFFF"
+                      style={styles.buttonIcon}
+                    />
+                  </>
                 )}
-              </Pressable>
+              </LinearGradient>
+            </Pressable>
 
-              {/* Register Button */}
-              <Pressable
-                onPress={onRegister}
-                disabled={loading}
-                className="bg-blue-500 rounded-full py-4 items-center justify-center shadow-lg"
-                style={{
-                  shadowColor: "#3b82f6",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 6,
-                }}
-              >
-                <Text className="text-white text-lg font-semibold">
-                  Register New Account
-                </Text>
-              </Pressable>
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
 
-              {/* Info Text */}
-              <Text className="text-gray-500 text-center text-sm mt-4">
+            {/* Register Button */}
+            <Pressable
+              onPress={onRegister}
+              disabled={loading}
+              style={({ pressed }) => [
+                styles.registerButton,
+                pressed && styles.registerButtonPressed,
+              ]}
+            >
+              <View style={styles.registerLogoContainer}>
+                <Ionicons name="school" size={18} color="#FFFFFF" />
+              </View>
+              <Text style={styles.registerButtonText}>Create New Account</Text>
+            </Pressable>
+
+            {/* Info Text */}
+            <View style={styles.infoContainer}>
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color="#64748B"
+              />
+              <Text style={styles.infoText}>
                 New users require admin approval after registration
               </Text>
             </View>
-
-            {/* Role Info */}
-            <View className="mt-6 w-full">
-              <Text className="text-gray-900 text-sm font-semibold mb-3">
-                Login as:
-              </Text>
-              <View className="gap-2">
-                <View className="bg-white rounded-xl p-3 border border-gray-100 flex-row items-center">
-                  <View className="bg-blue-100 w-8 h-8 rounded-full items-center justify-center mr-3">
-                    <Ionicons name="person" size={16} color="#3b82f6" />
-                  </View>
-                  <Text className="text-gray-600 text-sm">
-                    Student - Access exams and results
-                  </Text>
-                </View>
-                <View className="bg-white rounded-xl p-3 border border-gray-100 flex-row items-center">
-                  <View className="bg-purple-100 w-8 h-8 rounded-full items-center justify-center mr-3">
-                    <Ionicons name="school" size={16} color="#8b5cf6" />
-                  </View>
-                  <Text className="text-gray-600 text-sm">
-                    Teacher - Manage exams and students
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Skip Button - Top Right */}
-            <Pressable
-              onPress={onSkip}
-              className="absolute top-14 right-6 py-2 px-4 z-10"
-            >
-              <Text className="text-gray-600 text-base font-medium">Skip</Text>
-            </Pressable>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    paddingBottom: 40,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 32,
+  },
+  logoGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  logoTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginTop: 16,
+    letterSpacing: 0.5,
+  },
+  logoSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 4,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  formCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  welcomeContainer: {
+    marginBottom: 24,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: 4,
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  inputWrapper: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    paddingHorizontal: 4,
+  },
+  inputFocused: {
+    borderColor: "#10B981",
+    backgroundColor: "#F0FDF9",
+  },
+  inputIconContainer: {
+    width: 44,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  input: {
+    flex: 1,
+    height: 52,
+    fontSize: 16,
+    color: "#1E293B",
+  },
+  eyeButton: {
+    width: 44,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 13,
+    marginLeft: 8,
+    flex: 1,
+    fontWeight: "500",
+  },
+  loginButton: {
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
+  },
+  buttonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  loginButtonText: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
+  },
+  buttonIcon: {
+    marginLeft: 8,
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E2E8F0",
+  },
+  dividerText: {
+    fontSize: 13,
+    color: "#94A3B8",
+    marginHorizontal: 16,
+    fontWeight: "500",
+  },
+  registerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F0FDF9",
+    borderRadius: 16,
+    paddingVertical: 16,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+  },
+  registerButtonPressed: {
+    backgroundColor: "#DCFCE7",
+  },
+  registerLogoContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  registerButtonText: {
+    marginRight: 16,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#059669",
+  },
+  infoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+    paddingHorizontal: 12,
+  },
+  infoText: {
+    fontSize: 12,
+    color: "#64748B",
+    marginLeft: 6,
+    textAlign: "center",
+  },
+  rolesContainer: {
+    marginTop: 24,
+  },
+  rolesTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  rolesRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  roleCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    alignItems: "center",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  roleIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  roleTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginBottom: 2,
+  },
+  roleDescription: {
+    fontSize: 11,
+    color: "#64748B",
+    textAlign: "center",
+  },
+});

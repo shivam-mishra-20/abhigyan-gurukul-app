@@ -1,13 +1,13 @@
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  Animated,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Animated,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 85 : 70;
@@ -31,11 +31,11 @@ export function AnimatedTabBar({
 }: AnimatedTabBarProps) {
   // Use reactive window dimensions to handle orientation changes (fullscreen mode)
   const { width } = useWindowDimensions();
-  
+
   const focusedRoute = state.routes[state.index];
   const focusedDescriptor = descriptors[focusedRoute.key];
   const focusedOptions = focusedDescriptor.options;
-  
+
   // @ts-ignore
   const shouldHide = focusedOptions.tabBarStyle?.display === "none";
 
@@ -83,7 +83,7 @@ export function AnimatedTabBar({
 
   useEffect(() => {
     const currentIndex = visibleRoutes.findIndex(
-      (route) => route.key === state.routes[state.index].key
+      (route) => route.key === state.routes[state.index].key,
     );
 
     if (currentIndex === -1) return;
@@ -117,12 +117,12 @@ export function AnimatedTabBar({
       Z
     `;
     },
-    [tabWidth, width]
+    [tabWidth, width],
   );
 
   const [pathD, setPathD] = React.useState(() => {
     const currentIndex = visibleRoutes.findIndex(
-      (route) => route.key === state.routes[state.index].key
+      (route) => route.key === state.routes[state.index].key,
     );
     const curveWidth = 70;
     const centerX = Math.max(0, currentIndex) * tabWidth + tabWidth / 2;
@@ -155,7 +155,7 @@ export function AnimatedTabBar({
   const activeCircleTranslateX = animatedIndex.interpolate({
     inputRange: visibleRoutes.map((_, i) => i),
     outputRange: visibleRoutes.map(
-      (_, i) => i * tabWidth + tabWidth / 2 - ACTIVE_CIRCLE_SIZE / 2
+      (_, i) => i * tabWidth + tabWidth / 2 - ACTIVE_CIRCLE_SIZE / 2,
     ),
   });
 
@@ -210,7 +210,12 @@ export function AnimatedTabBar({
               canPreventDefault: true,
             });
 
-            if (!isFocused && !event.defaultPrevented) {
+            // If already focused, do nothing - prevents refresh and navigation reset
+            if (isFocused) {
+              return;
+            }
+
+            if (!event.defaultPrevented) {
               navigation.navigate(route.name);
             }
           };
