@@ -1,8 +1,8 @@
 import { ErrorBoundary } from "@/components/shared";
 import {
-  ThemeProvider as AppThemeProvider,
-  ToastProvider,
-  useAppTheme,
+    ThemeProvider as AppThemeProvider,
+    ToastProvider,
+    useAppTheme,
 } from "@/lib/context";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -21,7 +21,13 @@ function RootLayoutContent() {
 
   // Sync NativeWind's color scheme with app theme
   useEffect(() => {
-    setColorScheme(isDark ? "dark" : "light");
+    try {
+      if (setColorScheme) {
+        setColorScheme(isDark ? "dark" : "light");
+      }
+    } catch (e) {
+      console.warn("Error setting color scheme:", e);
+    }
   }, [isDark, setColorScheme]);
 
   return (

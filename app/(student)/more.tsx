@@ -1,7 +1,14 @@
 import { logout } from "@/lib/auth";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 const THEME = {
   primary: "#059669",
@@ -13,47 +20,105 @@ const MENU_SECTIONS = [
   {
     title: "Learning",
     items: [
-      { id: "exams", title: "Online Exams", icon: "document-text", route: "/(student)/modules/exams", color: "#3b82f6" },
-      { id: "results", title: "Results", icon: "trophy", route: "/(student)/modules/results", color: "#f59e0b" },
-      { id: "offline-results", title: "Offline Results", icon: "clipboard", route: "/(student)/modules/offline-results", color: "#14b8a6" },
-      { id: "materials", title: "Study Materials", icon: "folder-open", route: "/(student)/modules/materials", color: "#8b5cf6" },
-    ]
+      {
+        id: "exams",
+        title: "Online Exams",
+        icon: "document-text",
+        route: "/(student)/modules/exams",
+        color: "#3b82f6",
+      },
+      {
+        id: "results",
+        title: "Results",
+        icon: "trophy",
+        route: "/(student)/modules/results",
+        color: "#f59e0b",
+      },
+      {
+        id: "offline-results",
+        title: "Offline Results",
+        icon: "clipboard",
+        route: "/(student)/modules/offline-results",
+        color: "#14b8a6",
+      },
+      {
+        id: "materials",
+        title: "Study Materials",
+        icon: "folder-open",
+        route: "/(student)/modules/materials",
+        color: "#8b5cf6",
+      },
+    ],
   },
   {
     title: "Schedule & Activity",
     items: [
-      { id: "attendance", title: "Attendance", icon: "calendar", route: "/(student)/modules/attendance", color: "#10b981" },
-      { id: "schedule", title: "Class Schedule", icon: "time", route: "/(student)/modules/schedule", color: "#ec4899" },
-      { id: "leaderboard", title: "Leaderboard", icon: "podium", route: "/(student)/modules/leaderboard", color: "#f97316" },
-    ]
+      {
+        id: "attendance",
+        title: "Attendance",
+        icon: "calendar",
+        route: "/(student)/modules/attendance",
+        color: "#10b981",
+      },
+      {
+        id: "schedule",
+        title: "Class Schedule",
+        icon: "time",
+        route: "/(student)/modules/schedule",
+        color: "#ec4899",
+      },
+      {
+        id: "leaderboard",
+        title: "Leaderboard",
+        icon: "podium",
+        route: "/(student)/modules/leaderboard",
+        color: "#f97316",
+      },
+    ],
   },
   {
     title: "Account",
     items: [
-      { id: "notifications", title: "Notifications", icon: "notifications", route: "/(student)/modules/notifications", color: "#6366f1" },
-    ]
-  }
+      {
+        id: "doubts",
+        title: "My Doubts",
+        icon: "chatbubble-ellipses",
+        route: "/(student)/doubts",
+        color: "#8b5cf6",
+      },
+      {
+        id: "profile",
+        title: "Profile",
+        icon: "person",
+        route: "/(student)/profile",
+        color: "#059669",
+      },
+      {
+        id: "notifications",
+        title: "Notifications",
+        icon: "notifications",
+        route: "/(student)/modules/notifications",
+        color: "#6366f1",
+      },
+    ],
+  },
 ];
 
 export default function MoreScreen() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/splash");
-          }
-        }
-      ]
-    );
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          router.replace("/splash");
+        },
+      },
+    ]);
   };
 
   return (
@@ -69,7 +134,7 @@ export default function MoreScreen() {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -84,8 +149,17 @@ export default function MoreScreen() {
                   onPress={() => router.push(item.route as any)}
                   style={styles.menuItem}
                 >
-                  <View style={[styles.menuIcon, { backgroundColor: item.color + "15" }]}>
-                    <Ionicons name={item.icon as any} size={22} color={item.color} />
+                  <View
+                    style={[
+                      styles.menuIcon,
+                      { backgroundColor: item.color + "15" },
+                    ]}
+                  >
+                    <Ionicons
+                      name={item.icon as any}
+                      size={22}
+                      color={item.color}
+                    />
                   </View>
                   <Text style={styles.menuText}>{item.title}</Text>
                   <Ionicons name="chevron-forward" size={18} color="#d1d5db" />

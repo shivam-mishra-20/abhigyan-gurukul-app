@@ -5,7 +5,7 @@ import { getToken } from "@/lib/auth";
 import { useAppTheme } from "@/lib/context";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { BookOpen, GraduationCap, Home, User } from "lucide-react-native";
+import { BookOpen, GraduationCap, Home } from "lucide-react-native";
 import { useEffect } from "react";
 
 export default function StudentLayout() {
@@ -67,12 +67,13 @@ export default function StudentLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
-        name="profile"
+        name="doubts"
         options={{
-          title: "Profile",
+          title: "Doubts",
           tabBarIcon: ({ color, size }) => (
-            <User size={size} color={color} strokeWidth={2} />
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
         }}
       />
@@ -85,9 +86,13 @@ export default function StudentLayout() {
           ),
         }}
       />
-      
+
       {/* Hidden Screens */}
-      <Tabs.Screen name="modules" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen
+        name="modules"
+        options={{ href: null, headerShown: false }}
+      />
+      <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="attempt/[attemptId]" options={{ href: null }} />
       <Tabs.Screen name="result/[attemptId]" options={{ href: null }} />
       <Tabs.Screen name="course/[courseId]" options={{ href: null }} />

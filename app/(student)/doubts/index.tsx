@@ -3,30 +3,36 @@ import { uploadFileWithSignedUrl } from "@/lib/firebaseUpload";
 import { getSocket, joinDoubtRoom, leaveDoubtRoom } from "@/lib/socket";
 import * as ImagePicker from "expo-image-picker";
 import {
-    ArrowLeft,
-    CheckCircle,
-    FileText,
-    Image as ImageIcon,
-    Send,
-    User,
+  ArrowLeft,
+  FileText,
+  Image as ImageIcon,
+  Send,
+  User,
 } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Linking,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+interface Teacher {
+  _id: string;
+  name: string;
+  email: string;
+  profileImage?: string;
+}
 
 interface Message {
   _id: string;
@@ -35,7 +41,7 @@ interface Message {
     name: string;
     profileImage?: string;
   };
-  senderRole: "student" | "teacher";
+  senderRole: "student" | "teacher" | "admin";
   message: string;
   attachments: {
     url: string;
@@ -50,24 +56,22 @@ interface Doubt {
   teacher: {
     _id: string;
     name: string;
+    email: string;
     profileImage?: string;
   };
   student: {
     _id: string;
     name: string;
     profileImage?: string;
-    batch?: string;
   };
-  status: "pending" | "in-progress" | "resolved";
+  status: string;
   messages: Message[];
   createdAt: string;
 }
 
-export default function TeacherDoubts() {
-  const [view, setView] = useState<"chats" | "chat">("chats");
-  const [filter, setFilter] = useState<
-    "all" | "pending" | "in-progress" | "resolved"
-  >("all");
+export default function StudentDoubts() {
+  const [view, setView] = useState<"teachers" | "chats" | "chat">("chats");
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [doubts, setDoubts] = useState<Doubt[]>([]);
   const [selectedDoubt, setSelectedDoubt] = useState<Doubt | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,12 +83,72 @@ export default function TeacherDoubts() {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
+  const getDisplayTeacher = (doubt: Doubt) => {
+    // Primary: use the teacher field if populated
+    if (
+      doubt.teacher &&
+      typeof doubt.teacher === "object" &&
+      doubt.teacher.name
+    ) {
+      return doubt.teacher;
+    }
+
+    // Fallback: Check if any teacher has participated in messages
+    if (doubt.messages && doubt.messages.length > 0) {
+      const teacherMsg = doubt.messages.find(
+        (m) =>
+          (m.senderRole === "teacher" || m.senderRole === "admin") && m.sender,
+      );
+
+      if (teacherMsg && teacherMsg.sender) {
+        // Check if sender is populated (object with name)
+        if (
+          typeof teacherMsg.sender === "object" &&
+          "name" in teacherMsg.sender &&
+          teacherMsg.sender.name
+        ) {
+          return {
+            _id: teacherMsg.sender._id,
+            name: teacherMsg.sender.name,
+            email: "",
+            profileImage: teacherMsg.sender.profileImage,
+          } as Teacher;
+        }
+
+        // Sender exists but not populated (just an ObjectId) - user may have been deleted
+        return {
+          _id:
+            typeof teacherMsg.sender === "string"
+              ? teacherMsg.sender
+              : "unknown",
+          name: "Teacher",
+          email: "",
+          profileImage: undefined,
+        } as Teacher;
+      }
+    }
+
+    // No teacher assigned yet
+    return null;
+  };
+
+  const fetchTeachers = async () => {
+    try {
+      const res = (await apiFetch("/api/doubts/teachers")) as {
+        teachers: Teacher[];
+      };
+      setTeachers(res.teachers || []);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+    }
+  };
+
   const fetchDoubts = useCallback(async () => {
     try {
-      const params = filter !== "all" ? `?status=${filter}` : "";
-      const res = (await apiFetch(`/api/doubts/teacher${params}`)) as {
+      const res = (await apiFetch("/api/doubts/student/my-doubts")) as {
         doubts: Doubt[];
       };
+      console.log("[fetchDoubts] Received doubts:", res.doubts?.length);
       setDoubts(res.doubts || []);
     } catch (error) {
       console.error("Error fetching doubts:", error);
@@ -92,11 +156,12 @@ export default function TeacherDoubts() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filter]);
+  }, []);
 
   useEffect(() => {
     fetchDoubts();
-    fetchDoubts();
+    fetchTeachers();
+    fetchTeachers();
   }, [fetchDoubts]);
 
   const selectedDoubtId = selectedDoubt?._id;
@@ -112,13 +177,9 @@ export default function TeacherDoubts() {
           console.log("[Socket] Joined room:", selectedDoubtId);
 
           socketInstance.on("new_message", (updatedDoubt: Doubt) => {
-            console.log(
-              "[Socket] New message received",
-              updatedDoubt.messages.length,
-              "messages",
-            );
+            console.log("[Socket] New message received");
             if (updatedDoubt._id === selectedDoubtId) {
-              // Update with real messages from server
+              // Server sends complete data with fresh URLs - trust it
               setSelectedDoubt(updatedDoubt);
               setDoubts((prev) =>
                 prev.map((d) =>
@@ -145,6 +206,7 @@ export default function TeacherDoubts() {
   const handlePickImage = async () => {
     if (!selectedDoubt) return;
     try {
+      console.log("[Image] Opening image picker...");
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,
@@ -154,6 +216,8 @@ export default function TeacherDoubts() {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
+
+        // Show preview
         setImagePreview(asset.uri);
       }
     } catch (err) {
@@ -170,11 +234,13 @@ export default function TeacherDoubts() {
       const fileName = `image_${Date.now()}.jpg`;
       const mimeType = "image/jpeg";
 
+      console.log("[Image] Uploading image:", { fileName, uri: imagePreview });
+
       // Optimistic UI update
       const tempMessage: Message = {
         _id: `temp_${Date.now()}`,
-        sender: selectedDoubt.teacher,
-        senderRole: "teacher",
+        sender: selectedDoubt.student,
+        senderRole: "student",
         message: "📎 Image",
         attachments: [
           {
@@ -203,6 +269,7 @@ export default function TeacherDoubts() {
         mimeType,
         selectedDoubt._id,
       );
+      console.log("[Image] File uploaded, creating message...");
 
       // Create message with attachment
       await apiFetch(`/api/doubts/${selectedDoubt._id}/messages`, {
@@ -221,6 +288,8 @@ export default function TeacherDoubts() {
           ],
         }),
       });
+
+      console.log("[Image] Message created successfully");
 
       // Socket will handle real-time update
     } catch (err) {
@@ -241,18 +310,46 @@ export default function TeacherDoubts() {
     }
   };
 
+  const handleStartChat = async (teacher: Teacher) => {
+    try {
+      const message = "Hi, I need help!";
+      setSending(true);
+      console.log(
+        "[handleStartChat] Creating doubt with teacher:",
+        teacher.name,
+        teacher._id,
+      );
+      const newDoubt = (await apiFetch("/api/doubts", {
+        method: "POST",
+        body: JSON.stringify({
+          teacherId: teacher._id,
+          message,
+        }),
+      })) as Doubt;
+
+      await fetchDoubts();
+      setSelectedDoubt(newDoubt);
+      setView("chat");
+    } catch (error) {
+      console.error("Error starting chat:", error);
+      Alert.alert("Error", "Failed to start chat");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!selectedDoubt || !newMessage.trim()) return;
 
     const messageText = newMessage.trim();
-    setNewMessage(""); // Clear immediately
+    setNewMessage(""); // Clear immediately for better UX
     setSending(true);
 
     // Optimistic UI update
     const tempMessage: Message = {
       _id: `temp_${Date.now()}`,
-      sender: selectedDoubt.teacher,
-      senderRole: "teacher",
+      sender: selectedDoubt.student,
+      senderRole: "student",
       message: messageText,
       attachments: [],
       createdAt: new Date().toISOString(),
@@ -280,7 +377,7 @@ export default function TeacherDoubts() {
     } catch (err) {
       console.error("Send error:", err);
       Alert.alert("Error", "Failed to send message");
-      // Revert optimistic update
+      // Revert optimistic update on error
       setSelectedDoubt((prev) =>
         prev
           ? {
@@ -291,24 +388,6 @@ export default function TeacherDoubts() {
       );
     } finally {
       setSending(false);
-    }
-  };
-
-  const handleResolve = async () => {
-    if (!selectedDoubt) return;
-
-    try {
-      await apiFetch(`/api/doubts/${selectedDoubt._id}/resolve`, {
-        method: "PUT",
-      });
-
-      Alert.alert("Success", "Doubt marked as resolved");
-      await fetchDoubts();
-      setView("chats");
-      setSelectedDoubt(null);
-    } catch (err) {
-      console.error("Resolve error:", err);
-      Alert.alert("Error", "Failed to resolve doubt");
     }
   };
 
@@ -323,19 +402,6 @@ export default function TeacherDoubts() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "#f59e0b";
-      case "in-progress":
-        return "#3b82f6";
-      case "resolved":
-        return "#10b981";
-      default:
-        return "#6b7280";
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -344,7 +410,60 @@ export default function TeacherDoubts() {
     );
   }
 
+  if (view === "teachers") {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={() => setView("chats")}>
+            <ArrowLeft size={24} color="#1f2937" />
+          </Pressable>
+          <Text style={styles.headerTitle}>Select Teacher</Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchTeachers();
+                setRefreshing(false);
+              }}
+            />
+          }
+        >
+          {teachers.map((teacher) => (
+            <Pressable
+              key={teacher._id}
+              style={styles.teacherCard}
+              onPress={() => handleStartChat(teacher)}
+              disabled={sending}
+            >
+              <View style={styles.teacherAvatar}>
+                {teacher.profileImage ? (
+                  <Image
+                    source={{ uri: teacher.profileImage }}
+                    style={styles.avatar}
+                  />
+                ) : (
+                  <User size={24} color="#8b5cf6" />
+                )}
+              </View>
+              <View style={styles.teacherInfo}>
+                <Text style={styles.teacherName}>{teacher.name}</Text>
+                <Text style={styles.teacherEmail}>{teacher.email}</Text>
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   if (view === "chat" && selectedDoubt) {
+    const displayTeacher = getDisplayTeacher(selectedDoubt);
     return (
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <KeyboardAvoidingView
@@ -363,9 +482,9 @@ export default function TeacherDoubts() {
             </Pressable>
             <View style={styles.chatHeader}>
               <View style={styles.avatarSmall}>
-                {selectedDoubt.student?.profileImage ? (
+                {displayTeacher?.profileImage ? (
                   <Image
-                    source={{ uri: selectedDoubt.student.profileImage }}
+                    source={{ uri: displayTeacher.profileImage }}
                     style={styles.avatar}
                   />
                 ) : (
@@ -374,20 +493,18 @@ export default function TeacherDoubts() {
               </View>
               <View>
                 <Text style={styles.headerTitle}>
-                  {selectedDoubt.student?.name || "Unknown Student"}
+                  {displayTeacher
+                    ? displayTeacher.name
+                    : "Waiting for teacher..."}
                 </Text>
-                {selectedDoubt.student?.batch && (
+                {displayTeacher?.email ? (
                   <Text style={styles.headerSubtitle}>
-                    {selectedDoubt.student.batch}
+                    {displayTeacher.email}
                   </Text>
-                )}
+                ) : null}
               </View>
             </View>
-            {selectedDoubt.status !== "resolved" && (
-              <Pressable onPress={handleResolve} style={styles.resolveButton}>
-                <CheckCircle size={20} color="#10b981" />
-              </Pressable>
-            )}
+            <View style={{ width: 24 }} />
           </View>
 
           <FlatList
@@ -406,7 +523,7 @@ export default function TeacherDoubts() {
               <View
                 style={[
                   styles.messageBubble,
-                  msg.senderRole === "teacher"
+                  msg.senderRole === "student"
                     ? styles.myMessage
                     : styles.theirMessage,
                 ]}
@@ -414,7 +531,7 @@ export default function TeacherDoubts() {
                 <Text
                   style={[
                     styles.messageText,
-                    msg.senderRole === "teacher" && styles.myMessageText,
+                    msg.senderRole === "student" && styles.myMessageText,
                   ]}
                 >
                   {msg.message}
@@ -457,40 +574,38 @@ export default function TeacherDoubts() {
             )}
           />
 
-          {selectedDoubt.status !== "resolved" && (
-            <View style={styles.inputContainer}>
-              <Pressable onPress={handlePickImage} style={styles.iconButton}>
-                <ImageIcon size={24} color="#10b981" />
-              </Pressable>
-              <TextInput
-                style={styles.input}
-                value={newMessage}
-                onChangeText={setNewMessage}
-                placeholder="Type your reply..."
-                placeholderTextColor="#9ca3af"
-                multiline
-                maxLength={1000}
-              />
-              <Pressable
-                onPress={handleSendMessage}
-                disabled={!newMessage.trim() || sending}
-                style={[
-                  styles.sendButton,
-                  (!newMessage.trim() || sending) && styles.sendButtonDisabled,
-                ]}
-              >
-                {sending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Send size={20} color="#fff" />
-                )}
-              </Pressable>
-            </View>
-          )}
+          <View style={styles.inputContainer}>
+            <Pressable onPress={handlePickImage} style={styles.iconButton}>
+              <ImageIcon size={24} color="#6366f1" />
+            </Pressable>
+            <TextInput
+              style={styles.input}
+              value={newMessage}
+              onChangeText={setNewMessage}
+              placeholder="Type your message..."
+              placeholderTextColor="#9ca3af"
+              multiline
+              maxLength={1000}
+            />
+            <Pressable
+              onPress={handleSendMessage}
+              disabled={!newMessage.trim() || sending}
+              style={[
+                styles.sendButton,
+                (!newMessage.trim() || sending) && styles.sendButtonDisabled,
+              ]}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Send size={20} color="#fff" />
+              )}
+            </Pressable>
+          </View>
 
           {uploading && (
             <View style={styles.uploadingOverlay}>
-              <ActivityIndicator size="large" color="#10b981" />
+              <ActivityIndicator size="large" color="#6366f1" />
               <Text style={styles.uploadingText}>Uploading...</Text>
             </View>
           )}
@@ -501,7 +616,7 @@ export default function TeacherDoubts() {
                 <View style={styles.previewHeader}>
                   <Text style={styles.previewTitle}>Send Image?</Text>
                   <Pressable onPress={() => setImagePreview(null)}>
-                    <Text style={styles.previewCancel}>\u2715</Text>
+                    <Text style={styles.previewCancel}>✕</Text>
                   </Pressable>
                 </View>
                 <Image
@@ -544,7 +659,7 @@ export default function TeacherDoubts() {
                   style={styles.fullscreenClose}
                   onPress={() => setFullscreenImage(null)}
                 >
-                  <Text style={styles.fullscreenCloseText}>\u2715 Close</Text>
+                  <Text style={styles.fullscreenCloseText}>✕ Close</Text>
                 </Pressable>
                 <Image
                   source={{ uri: fullscreenImage }}
@@ -562,29 +677,13 @@ export default function TeacherDoubts() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Student Doubts</Text>
-      </View>
-
-      <View style={styles.filterContainer}>
-        {["all", "pending", "in-progress", "resolved"].map((f) => (
-          <Pressable
-            key={f}
-            style={[
-              styles.filterButton,
-              filter === f && styles.filterButtonActive,
-            ]}
-            onPress={() => setFilter(f as any)}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                filter === f && styles.filterButtonTextActive,
-              ]}
-            >
-              {f.replace("-", " ")}
-            </Text>
-          </Pressable>
-        ))}
+        <Text style={styles.headerTitle}>My Doubts</Text>
+        <Pressable
+          style={styles.newChatButton}
+          onPress={() => setView("teachers")}
+        >
+          <Text style={styles.newChatButtonText}>New</Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -595,57 +694,60 @@ export default function TeacherDoubts() {
       >
         {doubts.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No doubts found</Text>
+            <Text style={styles.emptyText}>No doubts yet</Text>
+            <Pressable
+              style={styles.emptyButton}
+              onPress={() => setView("teachers")}
+            >
+              <Text style={styles.emptyButtonText}>Ask a Teacher</Text>
+            </Pressable>
           </View>
         ) : (
-          doubts.map((doubt) => (
-            <Pressable
-              key={doubt._id}
-              style={styles.chatCard}
-              onPress={() => {
-                setSelectedDoubt(doubt);
-                setView("chat");
-              }}
-            >
-              <View style={styles.chatAvatar}>
-                {doubt.student?.profileImage ? (
-                  <Image
-                    source={{ uri: doubt.student.profileImage }}
-                    style={styles.avatar}
-                  />
-                ) : (
-                  <User size={20} color="#8b5cf6" />
-                )}
-              </View>
-              <View style={styles.chatInfo}>
-                <View style={styles.chatNameRow}>
-                  <Text style={styles.chatName}>
-                    {doubt.student?.name || "Unknown Student"}
-                  </Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: getStatusColor(doubt.status) },
-                    ]}
-                  >
-                    <Text style={styles.statusBadgeText}>{doubt.status}</Text>
-                  </View>
+          doubts.map((doubt) => {
+            const displayTeacher = getDisplayTeacher(doubt);
+            return (
+              <Pressable
+                key={doubt._id}
+                style={styles.chatCard}
+                onPress={() => {
+                  setSelectedDoubt(doubt);
+                  setView("chat");
+                }}
+              >
+                <View style={styles.chatAvatar}>
+                  {displayTeacher?.profileImage ? (
+                    <Image
+                      source={{ uri: displayTeacher.profileImage }}
+                      style={styles.avatar}
+                    />
+                  ) : (
+                    <User size={20} color="#8b5cf6" />
+                  )}
                 </View>
-                <Text style={styles.chatLastMessage} numberOfLines={1}>
-                  {doubt.messages[doubt.messages.length - 1]?.message ||
-                    "No messages"}
-                </Text>
-                {doubt.student?.batch && (
-                  <Text style={styles.batchText}>{doubt.student.batch}</Text>
-                )}
-              </View>
-              <View style={styles.chatMeta}>
-                <Text style={styles.chatTime}>
-                  {new Date(doubt.createdAt).toLocaleDateString()}
-                </Text>
-              </View>
-            </Pressable>
-          ))
+                <View style={styles.chatInfo}>
+                  <Text style={styles.chatName}>
+                    {displayTeacher
+                      ? displayTeacher.name
+                      : "Waiting for teacher..."}
+                  </Text>
+                  <Text style={styles.chatLastMessage} numberOfLines={1}>
+                    {doubt.messages[doubt.messages.length - 1]?.message ||
+                      "No messages"}
+                  </Text>
+                </View>
+                <View style={styles.chatMeta}>
+                  <Text style={styles.chatTime}>
+                    {new Date(doubt.createdAt).toLocaleDateString()}
+                  </Text>
+                  {doubt.status === "pending" && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>New</Text>
+                    </View>
+                  )}
+                </View>
+              </Pressable>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
@@ -693,41 +795,55 @@ const styles = StyleSheet.create({
     gap: 8,
     flex: 1,
   },
-  resolveButton: {
-    padding: 8,
-  },
-  filterContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    gap: 10,
-  },
-  filterButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 9,
+  newChatButton: {
+    backgroundColor: "#6366f1",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 24,
-    backgroundColor: "#f3f4f6",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
+    elevation: 2,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
   },
-  filterButtonActive: {
-    backgroundColor: "#10b981",
-    borderColor: "#10b981",
-  },
-  filterButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#6b7280",
-    textTransform: "capitalize",
-  },
-  filterButtonTextActive: {
+  newChatButtonText: {
     color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
   },
   content: {
     flex: 1,
+  },
+  teacherCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+    gap: 12,
+  },
+  teacherAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  teacherInfo: {
+    flex: 1,
+  },
+  teacherName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1f2937",
+  },
+  teacherEmail: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginTop: 2,
   },
   chatCard: {
     flexDirection: "row",
@@ -764,48 +880,38 @@ const styles = StyleSheet.create({
   chatInfo: {
     flex: 1,
   },
-  chatNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
   chatName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#1f2937",
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  statusBadgeText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "capitalize",
   },
   chatLastMessage: {
     fontSize: 14,
     color: "#6b7280",
     marginTop: 2,
   },
-  batchText: {
-    fontSize: 12,
-    color: "#8b5cf6",
-    marginTop: 2,
-  },
   chatMeta: {
     alignItems: "flex-end",
+    gap: 4,
   },
   chatTime: {
     fontSize: 12,
     color: "#9ca3af",
   },
+  badge: {
+    backgroundColor: "#6366f1",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "600",
+  },
   messageList: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#f3f4f6",
   },
   messageListContent: {
     padding: 16,
@@ -825,7 +931,7 @@ const styles = StyleSheet.create({
   },
   myMessage: {
     alignSelf: "flex-end",
-    backgroundColor: "#10b981",
+    backgroundColor: "#6366f1",
     borderBottomRightRadius: 4,
   },
   theirMessage: {
@@ -899,7 +1005,7 @@ const styles = StyleSheet.create({
     color: "#1f2937",
   },
   sendButton: {
-    backgroundColor: "#10b981",
+    backgroundColor: "#6366f1",
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -907,7 +1013,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 4,
     elevation: 2,
-    shadowColor: "#10b981",
+    shadowColor: "#6366f1",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
@@ -985,7 +1091,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f4f6",
   },
   previewButtonPrimary: {
-    backgroundColor: "#10b981",
+    backgroundColor: "#6366f1",
   },
   previewButtonText: {
     fontSize: 16,
@@ -1033,9 +1139,26 @@ const styles = StyleSheet.create({
   empty: {
     padding: 32,
     alignItems: "center",
+    gap: 16,
   },
   emptyText: {
     fontSize: 16,
     color: "#6b7280",
+  },
+  emptyButton: {
+    backgroundColor: "#6366f1",
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 24,
+    elevation: 2,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  emptyButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
   },
 });

@@ -1,13 +1,13 @@
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-    Animated,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  Animated,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 85 : 70;
@@ -60,6 +60,7 @@ export function AnimatedTabBar({
         "schedule",
         "leaderboard",
         "modules",
+        "profile",
         "attempt/[attemptId]",
         "result/[attemptId]",
         "course/[courseId]",

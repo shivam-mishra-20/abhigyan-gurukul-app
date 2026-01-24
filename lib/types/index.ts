@@ -7,7 +7,7 @@
 // USER TYPES
 // =============================================================================
 
-export type UserRole = 'admin' | 'teacher' | 'student';
+export type UserRole = "admin" | "teacher" | "student";
 
 export interface User {
   id?: string;
@@ -65,7 +65,23 @@ export interface ExamOption {
 export interface Question {
   _id: string;
   text: string;
-  type: 'mcq' | 'mcq-single' | 'mcq-multi' | 'text' | 'essay' | 'numerical' | 'integer' | 'true_false' | 'true-false' | 'truefalse' | 'multi_select' | 'assertion_reason' | 'assertionreason' | 'short' | 'long' | 'subjective';
+  type:
+    | "mcq"
+    | "mcq-single"
+    | "mcq-multi"
+    | "text"
+    | "essay"
+    | "numerical"
+    | "integer"
+    | "true_false"
+    | "true-false"
+    | "truefalse"
+    | "multi_select"
+    | "assertion_reason"
+    | "assertionreason"
+    | "short"
+    | "long"
+    | "subjective";
   options?: ExamOption[];
   correctAnswer?: string;
   marks?: number;
@@ -78,7 +94,7 @@ export interface Question {
   topic?: string;
   assertionText?: string;
   reasonText?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
+  difficulty?: "easy" | "medium" | "hard";
   createdAt?: string;
 }
 
@@ -134,7 +150,7 @@ export interface ProgressDataPoint {
 }
 
 export interface ExamFilters {
-  status?: 'all' | 'published' | 'draft';
+  status?: "all" | "published" | "draft";
   classLevel?: string;
   batch?: string;
   subject?: string;
@@ -166,7 +182,12 @@ export interface Answer {
   markedForReview?: boolean;
 }
 
-export type AttemptStatus = 'in-progress' | 'submitted' | 'reviewed' | 'published' | 'auto-submitted';
+export type AttemptStatus =
+  | "in-progress"
+  | "submitted"
+  | "reviewed"
+  | "published"
+  | "auto-submitted";
 
 export interface Attempt {
   _id: string;
@@ -209,7 +230,7 @@ export interface AttemptDetailResponse {
 // =============================================================================
 
 export interface Student extends User {
-  role: 'student';
+  role: "student";
   classLevel: string;
   batch: string;
   performance?: StudentPerformance;
@@ -251,7 +272,7 @@ export interface Announcement {
   _id: string;
   title: string;
   content: string;
-  type: 'info' | 'important' | 'urgent';
+  type: "info" | "important" | "urgent";
   targetGroups?: string[];
   targetClasses?: string[];
   targetBatches?: string[];
@@ -265,21 +286,60 @@ export interface Announcement {
 // DOUBT TYPES
 // =============================================================================
 
-export type DoubtStatus = 'pending' | 'answered' | 'closed';
+export type DoubtStatus = "pending" | "in-progress" | "resolved";
+
+export interface Attachment {
+  _id?: string;
+  fileId: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  url: string;
+  storagePath: string;
+}
+
+export interface Message {
+  _id: string;
+  sender: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  senderRole: "student" | "teacher" | "admin";
+  message: string;
+  attachments?: Attachment[];
+  createdAt: string;
+}
 
 export interface Doubt {
   _id: string;
-  title: string;
-  description: string;
-  subject?: string;
+  student: {
+    _id: string;
+    name: string;
+    email: string;
+    batch?: string;
+  };
+  teacher?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  subject: string;
   topic?: string;
-  imageUrl?: string;
+  chapter?: string;
+  question: string;
+  images?: string[];
   status: DoubtStatus;
-  studentId: string | User;
-  teacherId?: string | User;
-  answer?: string;
+  reply?: string;
+  replyImages?: string[];
+  repliedAt?: string;
+  batch?: string;
+  classLevel?: string;
+  priority: "low" | "normal" | "high";
+  messages: Message[];
   createdAt: string;
-  answeredAt?: string;
+  updatedAt: string;
 }
 
 // =============================================================================
@@ -298,7 +358,12 @@ export interface DashboardStats {
 
 export interface RecentActivity {
   id: string;
-  type: 'exam_created' | 'exam_published' | 'review_completed' | 'student_added' | 'announcement_sent';
+  type:
+    | "exam_created"
+    | "exam_published"
+    | "review_completed"
+    | "student_added"
+    | "announcement_sent";
   title: string;
   description: string;
   timestamp: string;
@@ -353,7 +418,7 @@ export interface FormState<T extends Record<string, unknown>> {
 // UI TYPES
 // =============================================================================
 
-export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
+export type LoadingState = "idle" | "loading" | "success" | "error";
 
 export interface AsyncState<T> {
   data: T | null;
@@ -364,7 +429,7 @@ export interface AsyncState<T> {
 
 export interface ToastConfig {
   id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
+  type: "success" | "error" | "warning" | "info";
   title: string;
   message?: string;
   duration?: number;
@@ -382,7 +447,7 @@ export interface ModalConfig {
   onCancel?: () => void;
   confirmText?: string;
   cancelText?: string;
-  type?: 'alert' | 'confirm' | 'custom';
+  type?: "alert" | "confirm" | "custom";
 }
 
 // =============================================================================
@@ -414,12 +479,12 @@ export interface UserSettings {
   notifications: boolean;
   darkMode: boolean;
   language: string;
-  fontSize: 'small' | 'medium' | 'large';
+  fontSize: "small" | "medium" | "large";
 }
 
 export interface AppConfig {
   apiBaseUrl: string;
   version: string;
   buildNumber: string;
-  environment: 'development' | 'staging' | 'production';
+  environment: "development" | "staging" | "production";
 }
