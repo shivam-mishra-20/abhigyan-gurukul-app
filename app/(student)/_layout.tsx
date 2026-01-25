@@ -5,7 +5,12 @@ import { getToken } from "@/lib/auth";
 import { useAppTheme } from "@/lib/context";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { BookOpen, GraduationCap, Home } from "lucide-react-native";
+import {
+    BookOpen,
+    GraduationCap,
+    Home,
+    MessageCircle,
+} from "lucide-react-native";
 import { useEffect } from "react";
 
 export default function StudentLayout() {
@@ -73,7 +78,7 @@ export default function StudentLayout() {
         options={{
           title: "Doubts",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+            <MessageCircle size={size} color={color} strokeWidth={2} />
           ),
         }}
       />

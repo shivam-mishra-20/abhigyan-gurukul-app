@@ -183,15 +183,18 @@ export interface Answer {
 }
 
 export type AttemptStatus =
+  | "created"
   | "in-progress"
   | "submitted"
   | "reviewed"
   | "published"
-  | "auto-submitted";
+  | "auto-submitted"
+  | "graded";
 
 export interface Attempt {
   _id: string;
-  examId: string | Exam;
+  examId: string | Exam; // For regular exams
+  practiceTestId?: string; // For practice tests
   userId: string | User;
   answers: Answer[];
   status: AttemptStatus;
@@ -204,6 +207,10 @@ export interface Attempt {
   resultPublished?: boolean;
   reviewerNotes?: string;
   createdAt?: string;
+
+  // Virtual/Computed fields
+  examTitle?: string;
+  isPracticeTest?: boolean;
 }
 
 export interface PendingReview extends Attempt {
@@ -480,6 +487,29 @@ export interface UserSettings {
   darkMode: boolean;
   language: string;
   fontSize: "small" | "medium" | "large";
+}
+
+export interface StudentAnalytics {
+  examsTaken: number;
+  avgScore: number;
+  accuracy: number;
+  recentPerformance: {
+    label: string;
+    percent: number;
+    date: string;
+  }[];
+  totalQuestionsPracticed: number;
+  subjectPerformance: {
+    subject: string;
+    accuracy: number;
+    totalQuestions: number;
+    correctQuestions: number;
+  }[];
+  overallStats: {
+    correct: number;
+    incorrect: number;
+    unattempted: number;
+  };
 }
 
 export interface AppConfig {

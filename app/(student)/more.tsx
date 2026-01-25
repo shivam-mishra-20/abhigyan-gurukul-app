@@ -48,6 +48,13 @@ const MENU_SECTIONS = [
         route: "/(student)/modules/materials",
         color: "#8b5cf6",
       },
+      {
+        id: "homework",
+        title: "Homework",
+        icon: "book",
+        route: "/(student)/modules/homework",
+        color: "#f97316",
+      },
     ],
   },
   {

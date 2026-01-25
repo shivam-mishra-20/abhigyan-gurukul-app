@@ -1,36 +1,39 @@
-import { getMyAttempts, getMyProgress } from "@/lib/studentApi";
-import type { Attempt, ProgressDataPoint } from "@/lib/types";
+import PerformanceCharts from "@/components/PerformanceCharts";
+import { getMyProgress } from "@/lib/studentApi";
+import type { StudentAnalytics } from "@/lib/types";
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     RefreshControl,
     ScrollView,
+    StyleSheet,
     Text,
-    View
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 // Rich green theme colors
 const THEME = {
   primary: "#059669",
   primaryLight: "#10b981",
+  secondary: "#f59e0b",
+  danger: "#ef4444",
+  text: "#1f2937",
+  subtext: "#6b7280",
 };
 
 export default function StudentProgress() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [progressData, setProgressData] = useState<ProgressDataPoint[]>([]);
-  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
+  const [mode, setMode] = useState<"online" | "offline">("online");
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [progress, attemptsList] = await Promise.all([
-        getMyProgress(),
-        getMyAttempts(),
-      ]);
-      setProgressData(progress);
-      setAttempts(attemptsList.filter((a) => a.status === "submitted" || a.status === "graded"));
+      const data = await getMyProgress(mode);
+      setAnalytics(data);
     } catch (error) {
       console.error("Error loading progress:", error);
       Alert.alert("Error", "Failed to load progress data.");
@@ -38,45 +41,33 @@ export default function StudentProgress() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [mode]);
 
   useEffect(() => {
+    setLoading(true);
     loadData();
-  }, []);
+  }, [loadData]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadData();
-  }, []);
-
-  // Calculate stats
-  const totalExams = attempts.length;
-  const averageScore =
-    progressData.length > 0
-      ? Math.round(progressData.reduce((sum, p) => sum + (p.percent || 0), 0) / progressData.length)
-      : 0;
-  const bestScore = progressData.length > 0
-    ? Math.max(...progressData.map((p) => p.percent || 0))
-    : 0;
-
-  // Prepare chart data (last 10 attempts)
-  const chartData = progressData.slice(-10).map((p, idx) => ({
-    label: p.examTitle?.substring(0, 8) || `#${idx + 1}`,
-    value: p.percent || 0,
-  }));
-
-  const maxChartValue = Math.max(...chartData.map((d) => d.value), 100);
+  }, [loadData]);
 
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50">
-        <View className="pt-14 pb-6 px-6" style={{ backgroundColor: THEME.primary }}>
+        <View
+          className="pt-14 pb-6 px-6"
+          style={{ backgroundColor: THEME.primary }}
+        >
           <Text className="text-white text-2xl font-bold">My Progress</Text>
-          <Text className="text-white/80 text-sm mt-1">Track your performance over time</Text>
+          <Text className="text-white/80 text-sm mt-1">
+            Track your performance over time
+          </Text>
         </View>
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={THEME.primary} />
-          <Text className="text-gray-500 mt-3">Loading progress...</Text>
+          <Text className="text-gray-500 mt-3">Loading analytics...</Text>
         </View>
       </View>
     );
@@ -95,142 +86,122 @@ export default function StudentProgress() {
       }
     >
       {/* Header */}
-      <View className="pt-14 pb-6 px-6" style={{ backgroundColor: THEME.primary }}>
+      <View
+        className="pt-14 pb-6 px-6"
+        style={{ backgroundColor: THEME.primary }}
+      >
         <Text className="text-white text-2xl font-bold">My Progress</Text>
-        <Text className="text-white/80 text-sm mt-1">Track your performance over time</Text>
+        <Text className="text-white/80 text-sm mt-1">
+          Detailed performance analytics
+        </Text>
       </View>
 
-      <View className="px-4 py-5">
-        {/* Stats Cards */}
+      {/* Toggle - Using pure styles to avoid css-interop crash */}
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity
+          onPress={() => setMode("online")}
+          style={[
+            styles.toggleButton,
+            mode === "online" && styles.toggleButtonActive,
+          ]}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.toggleButtonText,
+              mode === "online" && styles.toggleButtonTextActive,
+            ]}
+          >
+            Online Tests
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setMode("offline")}
+          style={[
+            styles.toggleButton,
+            mode === "offline" && styles.toggleButtonActive,
+          ]}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.toggleButtonText,
+              mode === "offline" && styles.toggleButtonTextActive,
+            ]}
+          >
+            Offline Results
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View className="px-4 py-5 pb-10">
+        {/* Main Stats Cards */}
         <View className="flex-row gap-3 mb-6">
-          <View className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <View 
-              className="w-10 h-10 rounded-full items-center justify-center mb-2"
-              style={{ backgroundColor: "#dcfce7" }}
-            >
+          <View className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 items-center">
+            <View className="w-10 h-10 rounded-full items-center justify-center mb-2 bg-green-100">
               <Ionicons name="document-text" size={20} color={THEME.primary} />
             </View>
-            <Text className="text-gray-900 text-2xl font-bold">{totalExams}</Text>
-            <Text className="text-gray-500 text-sm">Exams Taken</Text>
+            <Text className="text-gray-900 text-xl font-bold">
+              {analytics?.examsTaken || 0}
+            </Text>
+            <Text className="text-gray-500 text-xs">Exams</Text>
           </View>
 
-          <View className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <View className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 items-center">
             <View className="bg-amber-100 w-10 h-10 rounded-full items-center justify-center mb-2">
               <Ionicons name="stats-chart" size={20} color="#f59e0b" />
             </View>
-            <Text className="text-gray-900 text-2xl font-bold">{averageScore}%</Text>
-            <Text className="text-gray-500 text-sm">Average Score</Text>
+            <Text className="text-gray-900 text-xl font-bold">
+              {analytics?.avgScore || 0}%
+            </Text>
+            <Text className="text-gray-500 text-xs">Avg Score</Text>
           </View>
 
-          <View className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <View className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 items-center">
             <View className="bg-purple-100 w-10 h-10 rounded-full items-center justify-center mb-2">
-              <Ionicons name="trophy" size={20} color="#a855f7" />
+              <Ionicons name="help-circle" size={20} color="#a855f7" />
             </View>
-            <Text className="text-gray-900 text-2xl font-bold">{bestScore}%</Text>
-            <Text className="text-gray-500 text-sm">Best Score</Text>
+            <Text className="text-gray-900 text-xl font-bold">
+              {analytics?.totalQuestionsPracticed || 0}
+            </Text>
+            <Text className="text-gray-500 text-xs">Questions</Text>
           </View>
         </View>
 
-        {/* Performance Chart */}
-        {chartData.length > 0 ? (
-          <View className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
-            <Text className="text-gray-900 text-lg font-bold mb-4">Score Trend</Text>
-
-            {/* Simple Bar Chart */}
-            <View className="flex-row items-end h-40 mb-3">
-              {chartData.map((item, idx) => {
-                const barHeight = (item.value / maxChartValue) * 140;
-                const barColor =
-                  item.value >= 70
-                    ? THEME.primary
-                    : item.value >= 40
-                    ? "#f59e0b"
-                    : "#ef4444";
-
-                return (
-                  <View key={idx} className="flex-1 items-center mx-0.5">
-                    <Text className="text-gray-600 text-xs mb-1 font-medium">{item.value}%</Text>
-                    <View
-                      style={{
-                        width: "70%",
-                        height: Math.max(barHeight, 8),
-                        backgroundColor: barColor,
-                        borderRadius: 4,
-                      }}
-                    />
-                  </View>
-                );
-              })}
-            </View>
-
-            {/* X-axis Labels */}
-            <View className="flex-row">
-              {chartData.map((item, idx) => (
-                <View key={idx} className="flex-1 items-center">
-                  <Text className="text-gray-400 text-[10px]" numberOfLines={1}>
-                    {item.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View className="bg-white rounded-2xl p-8 items-center shadow-sm border border-gray-100 mb-6">
-            <View className="bg-gray-100 w-16 h-16 rounded-full items-center justify-center mb-3">
-              <Ionicons name="analytics-outline" size={32} color="#9ca3af" />
-            </View>
-            <Text className="text-gray-800 font-semibold mb-1">No Data Yet</Text>
-            <Text className="text-gray-500 text-center text-sm">
-              Complete exams to see your progress chart
-            </Text>
-          </View>
-        )}
-
-        {/* Recent Performance */}
-        {progressData.length > 0 && (
-          <View className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <Text className="text-gray-900 text-lg font-bold mb-4">Recent Performance</Text>
-
-            {progressData.slice(-5).reverse().map((item, idx) => {
-              const percent = item.percent || 0;
-              const color = percent >= 70 ? THEME.primary : percent >= 40 ? "#f59e0b" : "#ef4444";
-
-              return (
-                <View
-                  key={idx}
-                  className="flex-row items-center py-3 border-b border-gray-100"
-                  style={{ borderBottomWidth: idx === Math.min(progressData.length - 1, 4) ? 0 : 1 }}
-                >
-                  <View className="flex-1">
-                    <Text className="text-gray-800 font-medium" numberOfLines={1}>
-                      {item.examTitle || "Exam"}
-                    </Text>
-                    {item.submittedAt && (
-                      <Text className="text-gray-400 text-xs">
-                        {new Date(item.submittedAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </Text>
-                    )}
-                  </View>
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-600 mr-2">
-                      {item.totalScore}/{item.maxScore}
-                    </Text>
-                    <View
-                      className="px-3 py-1 rounded-full"
-                      style={{ backgroundColor: color + "20" }}
-                    >
-                      <Text style={{ color, fontWeight: "600" }}>{percent}%</Text>
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
+        <PerformanceCharts analytics={analytics} />
       </View>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  toggleContainer: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 24,
+    backgroundColor: "#e5e7eb",
+    padding: 4,
+    borderRadius: 12,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  toggleButtonActive: {
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  toggleButtonText: {
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  toggleButtonTextActive: {
+    color: "#047857",
+  },
+});

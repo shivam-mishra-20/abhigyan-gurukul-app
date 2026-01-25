@@ -1,12 +1,12 @@
 // Student API service functions
 
-import { apiFetch } from './api';
+import { apiFetch } from "./api";
 import type {
     Attempt,
     AttemptDetailResponse,
     Exam,
-    ProgressDataPoint
-} from './types';
+    StudentAnalytics,
+} from "./types";
 
 // ============ Exam & Attempt APIs ============
 
@@ -20,24 +20,27 @@ export async function getAssignedExams(): Promise<{
 }> {
   // Call both APIs in parallel like the web app does
   const [examsData, attemptsData] = await Promise.all([
-    apiFetch('/api/attempts/assigned'),
-    apiFetch('/api/attempts/mine'),
+    apiFetch("/api/attempts/assigned"),
+    apiFetch("/api/attempts/mine"),
   ]);
 
   // Exams API returns an array directly
   const exams = Array.isArray(examsData) ? (examsData as Exam[]) : [];
-  
+
   // Attempts API returns an array, convert to Record<examId, Attempt>
   const attempts: Record<string, Attempt> = {};
   if (Array.isArray(attemptsData)) {
     for (const attempt of attemptsData as Attempt[]) {
-      const examId = typeof attempt.examId === 'string' ? attempt.examId : (attempt.examId as any)?._id;
+      const examId =
+        typeof attempt.examId === "string"
+          ? attempt.examId
+          : (attempt.examId as any)?._id;
       if (examId) {
         attempts[examId] = attempt;
       }
     }
   }
-  
+
   return { exams, attempts };
 }
 
@@ -45,9 +48,11 @@ export async function getAssignedExams(): Promise<{
  * Start a new exam attempt
  * The API returns the full attempt object, we extract the _id as attemptId
  */
-export async function startExamAttempt(examId: string): Promise<{ attemptId: string }> {
+export async function startExamAttempt(
+  examId: string,
+): Promise<{ attemptId: string }> {
   const data = await apiFetch(`/api/attempts/${examId}/start`, {
-    method: 'POST',
+    method: "POST",
   });
   // API returns the full attempt object with _id
   const attempt = data as Attempt;
@@ -58,14 +63,16 @@ export async function startExamAttempt(examId: string): Promise<{ attemptId: str
  * Get all attempts by the logged-in student
  */
 export async function getMyAttempts(): Promise<Attempt[]> {
-  const data = await apiFetch('/api/attempts/mine');
+  const data = await apiFetch("/api/attempts/mine");
   return data as Attempt[];
 }
 
 /**
  * Get attempt details with questions (for exam player)
  */
-export async function getAttempt(attemptId: string): Promise<AttemptDetailResponse> {
+export async function getAttempt(
+  attemptId: string,
+): Promise<AttemptDetailResponse> {
   const data = await apiFetch(`/api/attempts/${attemptId}`);
   return data as AttemptDetailResponse;
 }
@@ -76,10 +83,10 @@ export async function getAttempt(attemptId: string): Promise<AttemptDetailRespon
 export async function saveAnswer(
   attemptId: string,
   questionId: string,
-  response: string | number | string[]
+  response: string | number | string[],
 ): Promise<void> {
   await apiFetch(`/api/attempts/${attemptId}/answer`, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify({ questionId, response }),
   });
 }
@@ -90,10 +97,10 @@ export async function saveAnswer(
 export async function markForReview(
   attemptId: string,
   questionId: string,
-  marked: boolean
+  marked: boolean,
 ): Promise<void> {
   await apiFetch(`/api/attempts/${attemptId}/mark`, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify({ questionId, marked }),
   });
 }
@@ -103,7 +110,7 @@ export async function markForReview(
  */
 export async function submitAttempt(attemptId: string): Promise<void> {
   await apiFetch(`/api/attempts/${attemptId}/submit`, {
-    method: 'POST',
+    method: "POST",
   });
 }
 
@@ -112,7 +119,9 @@ export async function submitAttempt(attemptId: string): Promise<void> {
 /**
  * Get student's progress analytics
  */
-export async function getMyProgress(): Promise<ProgressDataPoint[]> {
-  const data = await apiFetch('/api/analytics/me/progress');
-  return data as ProgressDataPoint[];
+export async function getMyProgress(
+  mode: "online" | "offline" | "combined" = "combined",
+): Promise<StudentAnalytics> {
+  const data = await apiFetch(`/api/analytics/me/progress?mode=${mode}`);
+  return data as StudentAnalytics;
 }

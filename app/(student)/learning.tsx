@@ -1,6 +1,7 @@
+import PerformanceCharts from "@/components/PerformanceCharts";
 import { Course, getEnrolledCourses } from "@/lib/enhancedApi";
 import { getMyAttempts, getMyProgress } from "@/lib/studentApi";
-import type { Attempt, ProgressDataPoint } from "@/lib/types";
+import type { Attempt, StudentAnalytics } from "@/lib/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -23,38 +24,41 @@ const THEME = {
 };
 
 // Get YouTube thumbnail
-function getYouTubeThumbnail(videoUrl?: string, youtubeMeta?: { thumbnail?: string }): string | null {
+function getYouTubeThumbnail(
+  videoUrl?: string,
+  youtubeMeta?: { thumbnail?: string },
+): string | null {
   if (youtubeMeta?.thumbnail) return youtubeMeta.thumbnail;
   if (!videoUrl) return null;
-  
+
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
     /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
   ];
-  
+
   for (const pattern of patterns) {
     const match = videoUrl.match(pattern);
     if (match) return `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
   }
-  
+
   return null;
 }
 
 // Get course thumbnail
 function getCourseThumbnail(course: Course): string | null {
   if (course.thumbnail) return course.thumbnail;
-  
+
   if (course.syllabus && course.syllabus.length > 0) {
     const firstModule = course.syllabus[0];
     if (firstModule.lectures && firstModule.lectures.length > 0) {
       const firstLecture = firstModule.lectures[0] as any;
       return getYouTubeThumbnail(
         firstLecture.youtubeVideoId || firstLecture.videoUrl,
-        firstLecture.youtubeMeta
+        firstLecture.youtubeMeta,
       );
     }
   }
-  
+
   return null;
 }
 
@@ -63,20 +67,29 @@ export default function LearningScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
-  const [progressData, setProgressData] = useState<ProgressDataPoint[]>([]);
+  const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
-  const [activeTab, setActiveTab] = useState<"courses" | "exams" | "analytics">("courses");
+  const [activeTab, setActiveTab] = useState<"courses" | "exams" | "analytics">(
+    "courses",
+  );
 
   const loadData = async () => {
     try {
-      const [courses, progress, attemptsList] = await Promise.all([
+      const [courses, analyticsData, attemptsList] = await Promise.all([
         getEnrolledCourses().catch(() => []),
-        getMyProgress().catch(() => []),
+        getMyProgress().catch(() => null),
         getMyAttempts().catch(() => []),
       ]);
       setEnrolledCourses(courses);
-      setProgressData(progress);
-      setAttempts(attemptsList.filter((a) => a.status === "submitted" || a.status === "auto-submitted"));
+      if (analyticsData) setAnalytics(analyticsData);
+      setAttempts(
+        attemptsList.filter(
+          (a) =>
+            a.status === "submitted" ||
+            a.status === "auto-submitted" ||
+            a.status === "graded",
+        ),
+      );
     } catch (error) {
       console.error("Error loading learning data:", error);
     } finally {
@@ -94,16 +107,18 @@ export default function LearningScreen() {
     loadData();
   }, []);
 
-  // Stats calculation
-  const totalExams = attempts.length;
-  const avgScore = progressData.length > 0
-    ? Math.round(progressData.reduce((sum, p) => sum + (p.percent || 0), 0) / progressData.length)
-    : 0;
-  const totalTimeSpent = enrolledCourses.reduce((sum, c) => sum + ((c as any).timeSpent || 0), 0);
+  // Stats from backend
+  const avgScore = analytics?.avgScore || 0;
+  const totalTimeSpent = enrolledCourses.reduce(
+    (sum, c) => sum + ((c as any).timeSpent || 0),
+    0,
+  );
   const hoursSpent = Math.floor(totalTimeSpent / 60);
-  
+
   // Calculate completion
-  const completedCourses = enrolledCourses.filter(c => (c.progressPercent || 0) >= 100).length;
+  const completedCourses = enrolledCourses.filter(
+    (c) => (c.progressPercent || 0) >= 100,
+  ).length;
 
   if (loading) {
     return (
@@ -185,21 +200,69 @@ export default function LearningScreen() {
         </View>
       </View>
 
+      {/* Quick Action - Custom Test */}
+      <Pressable
+        onPress={() => router.push("/(student)/modules/custom-test" as any)}
+        style={{
+          marginHorizontal: 16,
+          marginTop: 16,
+          backgroundColor: "white",
+          borderRadius: 16,
+          padding: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          elevation: 2,
+          borderWidth: 1,
+          borderColor: "#ecfdf5",
+        }}
+      >
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            backgroundColor: "#ecfdf5",
+            justifyContent: "center",
+            alignItems: "center",
+            marginRight: 14,
+          }}
+        >
+          <Ionicons name="create" size={24} color={THEME.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: "#111827" }}>
+            Custom Practice Test
+          </Text>
+          <Text style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
+            Create your own test with chosen subjects & chapters
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={THEME.primary} />
+      </Pressable>
+
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         {(["courses", "exams", "analytics"] as const).map((tab) => {
           const isActive = activeTab === tab;
-          const icons = { courses: "play-circle", exams: "document-text", analytics: "bar-chart" } as const;
+          const icons = {
+            courses: "play-circle",
+            exams: "document-text",
+            analytics: "bar-chart",
+          } as const;
           return (
             <Pressable
               key={tab}
               onPress={() => setActiveTab(tab)}
               style={[styles.tabBtn, isActive && styles.tabBtnActive]}
             >
-              <Ionicons 
-                name={icons[tab]} 
-                size={18} 
-                color={isActive ? "white" : "#6b7280"} 
+              <Ionicons
+                name={icons[tab]}
+                size={18}
+                color={isActive ? "white" : "#6b7280"}
               />
               <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -233,15 +296,21 @@ export default function LearningScreen() {
             ) : (
               enrolledCourses.map((course) => {
                 const thumbnail = getCourseThumbnail(course);
-                const progress = course.progressPercent || 0;
-                const lectureCount = course.syllabus?.reduce(
-                  (acc, mod) => acc + (mod.lectures?.length || 0), 0
-                ) || course.lectureCount || 0;
-                
+                // const progress = course.progressPercent || 0; // Unused
+                const lectureCount =
+                  course.syllabus?.reduce(
+                    (acc, mod) => acc + (mod.lectures?.length || 0),
+                    0,
+                  ) ||
+                  course.lectureCount ||
+                  0;
+
                 return (
                   <Pressable
                     key={course._id}
-                    onPress={() => router.push(`/(student)/course/${course._id}` as any)}
+                    onPress={() =>
+                      router.push(`/(student)/course/${course._id}` as any)
+                    }
                     style={styles.courseCard}
                   >
                     {/* Thumbnail */}
@@ -253,27 +322,40 @@ export default function LearningScreen() {
                           resizeMode="cover"
                         />
                       ) : (
-                        <View style={[styles.courseThumbnailImg, styles.thumbnailPlaceholder]}>
-                          <Ionicons name="play-circle" size={24} color={THEME.primary} />
+                        <View
+                          style={[
+                            styles.courseThumbnailImg,
+                            styles.thumbnailPlaceholder,
+                          ]}
+                        >
+                          <Ionicons
+                            name="play-circle"
+                            size={24}
+                            color={THEME.primary}
+                          />
                         </View>
                       )}
                     </View>
-                    
+
                     <View style={styles.courseInfo}>
                       <Text style={styles.courseTitle} numberOfLines={2}>
                         {course.title}
                       </Text>
                       <View style={styles.courseMeta}>
                         <Ionicons name="videocam" size={12} color="#9ca3af" />
-                        <Text style={styles.courseMetaText}>{lectureCount} videos</Text>
+                        <Text style={styles.courseMetaText}>
+                          {lectureCount} videos
+                        </Text>
                         {course.subject && (
                           <>
                             <Text style={styles.courseMetaDot}>•</Text>
-                            <Text style={styles.courseMetaText}>{course.subject}</Text>
+                            <Text style={styles.courseMetaText}>
+                              {course.subject}
+                            </Text>
                           </>
                         )}
                       </View>
-                      
+
                       {/* Video Lecture Progress - Hidden for now */}
                       {/* <View style={styles.courseProgressContainer}>
                         <View style={styles.courseProgressBar}>
@@ -294,7 +376,11 @@ export default function LearningScreen() {
                       </View> */}
                     </View>
 
-                    <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="#d1d5db"
+                    />
                   </Pressable>
                 );
               })
@@ -307,7 +393,11 @@ export default function LearningScreen() {
             {attempts.length === 0 ? (
               <View style={styles.emptyState}>
                 <View style={styles.emptyIconContainer}>
-                  <Ionicons name="document-text-outline" size={48} color="#d1d5db" />
+                  <Ionicons
+                    name="document-text-outline"
+                    size={48}
+                    color="#d1d5db"
+                  />
                 </View>
                 <Text style={styles.emptyTitle}>No Exams Taken</Text>
                 <Text style={styles.emptyText}>
@@ -317,7 +407,9 @@ export default function LearningScreen() {
             ) : (
               attempts.slice(0, 10).map((attempt) => {
                 const percent = attempt.maxScore
-                  ? Math.round(((attempt.totalScore || 0) / attempt.maxScore) * 100)
+                  ? Math.round(
+                      ((attempt.totalScore || 0) / attempt.maxScore) * 100,
+                    )
                   : 0;
                 const isPass = percent >= 40;
                 const isExcellent = percent >= 70;
@@ -325,42 +417,68 @@ export default function LearningScreen() {
                 return (
                   <Pressable
                     key={attempt._id}
-                    onPress={() => router.push(`/(student)/result/${attempt._id}` as any)}
+                    onPress={() =>
+                      router.push(`/(student)/result/${attempt._id}` as any)
+                    }
                     style={styles.examCard}
                   >
-                    <View style={[
-                      styles.examScoreBadge,
-                      { backgroundColor: isExcellent ? "#ecfdf5" : isPass ? "#fffbeb" : "#fef2f2" }
-                    ]}>
-                      <Text style={[
-                        styles.examScoreText,
-                        { color: isExcellent ? THEME.primary : isPass ? "#f59e0b" : "#ef4444" }
-                      ]}>
+                    <View
+                      style={[
+                        styles.examScoreBadge,
+                        {
+                          backgroundColor: isExcellent
+                            ? "#ecfdf5"
+                            : isPass
+                              ? "#fffbeb"
+                              : "#fef2f2",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.examScoreText,
+                          {
+                            color: isExcellent
+                              ? THEME.primary
+                              : isPass
+                                ? "#f59e0b"
+                                : "#ef4444",
+                          },
+                        ]}
+                      >
                         {percent}%
                       </Text>
                     </View>
-                    
+
                     <View style={styles.examInfo}>
                       <Text style={styles.examTitle} numberOfLines={1}>
                         {attempt.examTitle || "Exam"}
                       </Text>
                       <View style={styles.examMeta}>
                         <Text style={styles.examScore}>
-                          Score: {attempt.totalScore || 0}/{attempt.maxScore || 0}
+                          Score: {attempt.totalScore || 0}/
+                          {attempt.maxScore || 0}
                         </Text>
                         <Text style={styles.examDot}>•</Text>
                         <Text style={styles.examDate}>
                           {attempt.submittedAt
-                            ? new Date(attempt.submittedAt).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                              })
+                            ? new Date(attempt.submittedAt).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                },
+                              )
                             : "—"}
                         </Text>
                       </View>
                     </View>
 
-                    <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="#d1d5db"
+                    />
                   </Pressable>
                 );
               })
@@ -370,64 +488,7 @@ export default function LearningScreen() {
 
         {activeTab === "analytics" && (
           <View style={styles.analyticsCard}>
-            <Text style={styles.analyticsTitle}>Performance Summary</Text>
-            
-            <View style={styles.analyticsGrid}>
-              <View style={styles.analyticItem}>
-                <View style={[styles.analyticIcon, { backgroundColor: "#ecfdf5" }]}>
-                  <Ionicons name="document-text" size={20} color={THEME.primary} />
-                </View>
-                <Text style={styles.analyticValue}>{totalExams}</Text>
-                <Text style={styles.analyticLabel}>Exams Taken</Text>
-              </View>
-              
-              <View style={styles.analyticItem}>
-                <View style={[styles.analyticIcon, { backgroundColor: "#fef3c7" }]}>
-                  <Ionicons name="trophy" size={20} color="#f59e0b" />
-                </View>
-                <Text style={[styles.analyticValue, { color: avgScore >= 70 ? THEME.primary : "#f59e0b" }]}>
-                  {avgScore}%
-                </Text>
-                <Text style={styles.analyticLabel}>Avg Score</Text>
-              </View>
-              
-              <View style={styles.analyticItem}>
-                <View style={[styles.analyticIcon, { backgroundColor: "#dbeafe" }]}>
-                  <Ionicons name="book" size={20} color="#3b82f6" />
-                </View>
-                <Text style={styles.analyticValue}>{enrolledCourses.length}</Text>
-                <Text style={styles.analyticLabel}>Courses</Text>
-              </View>
-              
-              <View style={styles.analyticItem}>
-                <View style={[styles.analyticIcon, { backgroundColor: "#f3e8ff" }]}>
-                  <Ionicons name="time" size={20} color="#8b5cf6" />
-                </View>
-                <Text style={styles.analyticValue}>{hoursSpent}h</Text>
-                <Text style={styles.analyticLabel}>Time Spent</Text>
-              </View>
-            </View>
-
-            {progressData.length > 0 && (
-              <View style={styles.recentPerformance}>
-                <Text style={styles.recentTitle}>Recent Performance</Text>
-                {progressData.slice(-5).reverse().map((item, idx) => {
-                  const percent = item.percent || 0;
-                  const color = percent >= 70 ? THEME.primary : percent >= 40 ? "#f59e0b" : "#ef4444";
-                  return (
-                    <View key={idx} style={styles.recentItem}>
-                      <View style={[styles.recentDot, { backgroundColor: color }]} />
-                      <Text style={styles.recentLabel} numberOfLines={1}>
-                        {item.label || "Exam"}
-                      </Text>
-                      <Text style={[styles.recentScore, { color }]}>
-                        {percent}%
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
+            <PerformanceCharts analytics={analytics} />
           </View>
         )}
       </View>
