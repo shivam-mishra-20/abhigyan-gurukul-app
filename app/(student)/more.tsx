@@ -55,6 +55,13 @@ const MENU_SECTIONS = [
         route: "/(student)/modules/homework",
         color: "#f97316",
       },
+      {
+        id: "syllabus",
+        title: "Syllabus Progress",
+        icon: "list",
+        route: "/(student)/more/syllabus",
+        color: "#3b82f6",
+      },
     ],
   },
   {

@@ -15,6 +15,8 @@ export type User = {
   targetExams?: string[];
   studyGoals?: string[];
   profileImage?: string;
+  bio?: string;
+  empCode?: string;
 };
 
 export type LoginResponse = { token?: string; user?: User };

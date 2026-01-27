@@ -1,20 +1,23 @@
+import { GRADIENTS, SHADOWS } from "@/constants/colors";
 import { apiFetch } from "@/lib/api";
 import { getUser, logout } from "@/lib/auth";
 import { useAppTheme } from "@/lib/context";
-import { GRADIENTS, SHADOWS } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  Animated,
-  Modal,
-  Pressable,
-  Switch,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    Modal,
+    Pressable,
+    Switch,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -69,9 +72,13 @@ const MenuItem = ({
             width: 40,
             height: 40,
             borderRadius: 12,
-            backgroundColor: danger 
-              ? (isDark ? "rgba(239, 68, 68, 0.2)" : "#FEE2E2") 
-              : (isDark ? "rgba(139, 197, 63, 0.2)" : "#F0F9E8"),
+            backgroundColor: danger
+              ? isDark
+                ? "rgba(239, 68, 68, 0.2)"
+                : "#FEE2E2"
+              : isDark
+                ? "rgba(139, 197, 63, 0.2)"
+                : "#F0F9E8",
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -87,13 +94,19 @@ const MenuItem = ({
             style={{
               fontSize: 15,
               fontWeight: "600",
-              color: danger ? "#EF4444" : (isDark ? "#F3F4F6" : "#1F2937"),
+              color: danger ? "#EF4444" : isDark ? "#F3F4F6" : "#1F2937",
             }}
           >
             {label}
           </Text>
           {value && (
-            <Text style={{ fontSize: 13, color: isDark ? "#9CA3AF" : "#6B7280", marginTop: 2 }}>
+            <Text
+              style={{
+                fontSize: 13,
+                color: isDark ? "#9CA3AF" : "#6B7280",
+                marginTop: 2,
+              }}
+            >
               {value}
             </Text>
           )}
@@ -102,11 +115,20 @@ const MenuItem = ({
           <Switch
             value={toggleValue}
             onValueChange={onToggle}
-            trackColor={{ false: isDark ? "#374151" : "#E5E7EB", true: "#4E74F9" }}
-            thumbColor={toggleValue ? "#FFFFFF" : (isDark ? "#6B7280" : "#9CA3AF")}
+            trackColor={{
+              false: isDark ? "#374151" : "#E5E7EB",
+              true: "#4E74F9",
+            }}
+            thumbColor={
+              toggleValue ? "#FFFFFF" : isDark ? "#6B7280" : "#9CA3AF"
+            }
           />
         ) : (
-          <Ionicons name="chevron-forward" size={20} color={isDark ? "#6B7280" : "#9CA3AF"} />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={isDark ? "#6B7280" : "#9CA3AF"}
+          />
         )}
       </Pressable>
     </Animated.View>
@@ -147,10 +169,22 @@ const StatBadge = ({
     >
       <Ionicons name={icon as any} size={20} color={color} />
     </View>
-    <Text style={{ fontSize: 18, fontWeight: "700", color: isDark ? "#F3F4F6" : "#111827" }}>
+    <Text
+      style={{
+        fontSize: 18,
+        fontWeight: "700",
+        color: isDark ? "#F3F4F6" : "#111827",
+      }}
+    >
       {value}
     </Text>
-    <Text style={{ fontSize: 12, color: isDark ? "#9CA3AF" : "#6B7280", marginTop: 2 }}>
+    <Text
+      style={{
+        fontSize: 12,
+        color: isDark ? "#9CA3AF" : "#6B7280",
+        marginTop: 2,
+      }}
+    >
       {label}
     </Text>
   </View>
@@ -160,14 +194,28 @@ export default function TeacherProfile() {
   const router = useRouter();
   const { isDark, themeMode, setThemeMode } = useAppTheme();
   const [user, setUser] = useState<any>(null);
+
+  // Modals
   const [notifications, setNotifications] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+
+  // Forms
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    phone: "",
+    bio: "",
+  });
+
   const [changingPassword, setChangingPassword] = useState(false);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -177,6 +225,97 @@ export default function TeacherProfile() {
   const loadUser = async () => {
     const userData = await getUser();
     setUser(userData);
+    if (userData) {
+      setProfileForm({
+        name: userData.name || "",
+        phone: userData.phone || "",
+        bio: userData.bio || "",
+      });
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadImage(result.assets[0]);
+      }
+    } catch {
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+  const uploadImage = async (asset: ImagePicker.ImagePickerAsset) => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      const fileName = asset.uri.split("/").pop() || "profile.jpg";
+      const fileType = fileName.endsWith(".png") ? "image/png" : "image/jpeg";
+
+      // @ts-ignore
+      formData.append("image", {
+        uri: asset.uri,
+        name: fileName,
+        type: fileType,
+      });
+
+      // Use the same endpoint as student profile for consistency
+      const response = (await apiFetch("/api/auth/profile/image", {
+        method: "POST",
+        headers: {
+          // Content-Type is purposely omitted to allow boundary to be set automatically
+        },
+        body: formData,
+      })) as { profileImage: string; user: any };
+
+      if (response?.profileImage) {
+        Alert.alert("Success", "Profile image updated");
+        // Update user state immediately with new image
+        setUser((prev: any) => {
+          const updated = { ...prev, profileImage: response.profileImage };
+          // Persist to AsyncStorage to prevent staleness on reload
+          import("@react-native-async-storage/async-storage").then((mod) => {
+            mod.default.setItem("user", JSON.stringify(updated));
+          });
+          return updated;
+        });
+      } else {
+        throw new Error("Failed to get profile image url from response");
+      }
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      Alert.alert("Error", error.message || "Failed to upload image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!profileForm.name.trim()) {
+      Alert.alert("Error", "Name is required");
+      return;
+    }
+
+    setUpdatingProfile(true);
+    try {
+      await apiFetch("/api/users/me/profile", {
+        method: "PUT",
+        body: JSON.stringify(profileForm),
+      });
+
+      Alert.alert("Success", "Profile updated successfully");
+      setShowEditProfileModal(false);
+      loadUser();
+    } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to update profile");
+    } finally {
+      setUpdatingProfile(false);
+    }
   };
 
   const handleChangePassword = async () => {
@@ -246,7 +385,7 @@ export default function TeacherProfile() {
         style={{ flex: 1, backgroundColor: isDark ? "#1F2937" : "#F9FAFB" }}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
+          { useNativeDriver: true },
         )}
         scrollEventThrottle={16}
       >
@@ -286,7 +425,8 @@ export default function TeacherProfile() {
 
             {/* Profile Info */}
             <View style={{ alignItems: "center" }}>
-              <View
+              <Pressable
+                onPress={handlePickImage}
                 style={{
                   width: 100,
                   height: 100,
@@ -297,10 +437,39 @@ export default function TeacherProfile() {
                   marginBottom: 16,
                   borderWidth: 4,
                   borderColor: "rgba(255,255,255,0.5)",
+                  overflow: "hidden",
+                  position: "relative",
                 }}
               >
-                <Ionicons name="person" size={48} color="white" />
-              </View>
+                {user?.profileImage ? (
+                  <Image
+                    source={{ uri: user.profileImage }}
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                ) : (
+                  <Ionicons name="person" size={48} color="white" />
+                )}
+
+                {/* Edit Badge */}
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    width: "100%",
+                    height: 30,
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {uploadingImage ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Ionicons name="camera" size={16} color="white" />
+                  )}
+                </View>
+              </Pressable>
+
               <Text style={{ color: "white", fontSize: 22, fontWeight: "700" }}>
                 {user?.name || "Teacher Name"}
               </Text>
@@ -313,6 +482,17 @@ export default function TeacherProfile() {
               >
                 {user?.email || "teacher@school.com"}
               </Text>
+              {user?.empCode && (
+                <Text
+                  style={{
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: 12,
+                    marginTop: 2,
+                  }}
+                >
+                  ID: {user.empCode}
+                </Text>
+              )}
               <View
                 style={{
                   backgroundColor: "rgba(255,255,255,0.2)",
@@ -353,19 +533,29 @@ export default function TeacherProfile() {
           <StatBadge
             icon="school"
             label="Students"
-            value="245"
+            value="--"
             color="#4E74F9"
             isDark={isDark}
           />
-          <View style={{ width: 1, backgroundColor: isDark ? "#374151" : "#E5E7EB" }} />
+          <View
+            style={{
+              width: 1,
+              backgroundColor: isDark ? "#374151" : "#E5E7EB",
+            }}
+          />
           <StatBadge
             icon="document-text"
             label="Exams"
-            value="32"
+            value="--"
             color="#3B82F6"
             isDark={isDark}
           />
-          <View style={{ width: 1, backgroundColor: isDark ? "#374151" : "#E5E7EB" }} />
+          <View
+            style={{
+              width: 1,
+              backgroundColor: isDark ? "#374151" : "#E5E7EB",
+            }}
+          />
           <StatBadge
             icon="star"
             label="Rating"
@@ -398,8 +588,8 @@ export default function TeacherProfile() {
           >
             <MenuItem
               icon="briefcase-outline"
-              label="Department"
-              value="Science & Mathematics"
+              label="Bio"
+              value={user?.bio || "No bio added"}
               isDark={isDark}
             />
             <View
@@ -410,19 +600,11 @@ export default function TeacherProfile() {
               }}
             />
             <MenuItem
-              icon="ribbon-outline"
-              label="Experience"
-              value="5 Years"
+              icon="call-outline"
+              label="Phone"
+              value={user?.phone || "--"}
               isDark={isDark}
             />
-            <View
-              style={{
-                height: 1,
-                backgroundColor: isDark ? "#374151" : "#F3F4F6",
-                marginLeft: 70,
-              }}
-            />
-            <MenuItem icon="calendar-outline" label="Joined" value="Jan 2019" isDark={isDark} />
           </View>
         </View>
 
@@ -466,8 +648,8 @@ export default function TeacherProfile() {
               icon="moon-outline"
               label="Dark Mode"
               toggle
-              toggleValue={themeMode === 'dark'}
-              onToggle={(value) => setThemeMode(value ? 'dark' : 'light')}
+              toggleValue={themeMode === "dark"}
+              onToggle={(value) => setThemeMode(value ? "dark" : "light")}
               isDark={isDark}
             />
           </View>
@@ -497,7 +679,7 @@ export default function TeacherProfile() {
             <MenuItem
               icon="person-outline"
               label="Edit Profile"
-              onPress={() => {}}
+              onPress={() => setShowEditProfileModal(true)}
               isDark={isDark}
             />
             <View
@@ -511,75 +693,6 @@ export default function TeacherProfile() {
               icon="lock-closed-outline"
               label="Change Password"
               onPress={() => setShowPasswordModal(true)}
-              isDark={isDark}
-            />
-            <View
-              style={{
-                height: 1,
-                backgroundColor: isDark ? "#374151" : "#F3F4F6",
-                marginLeft: 70,
-              }}
-            />
-            <MenuItem
-              icon="shield-checkmark-outline"
-              label="Privacy Settings"
-              onPress={() => {}}
-              isDark={isDark}
-            />
-          </View>
-        </View>
-
-        {/* Support Section */}
-        <View style={{ marginTop: 24, marginHorizontal: 20 }}>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "600",
-              color: isDark ? "#9CA3AF" : "#6B7280",
-              marginBottom: 12,
-              marginLeft: 4,
-            }}
-          >
-            SUPPORT
-          </Text>
-          <View
-            style={{
-              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
-              borderRadius: 16,
-              overflow: "hidden",
-              ...SHADOWS.sm,
-            }}
-          >
-            <MenuItem
-              icon="help-circle-outline"
-              label="Help Center"
-              onPress={() => {}}
-              isDark={isDark}
-            />
-            <View
-              style={{
-                height: 1,
-                backgroundColor: isDark ? "#374151" : "#F3F4F6",
-                marginLeft: 70,
-              }}
-            />
-            <MenuItem
-              icon="chatbubble-outline"
-              label="Contact Us"
-              onPress={() => {}}
-              isDark={isDark}
-            />
-            <View
-              style={{
-                height: 1,
-                backgroundColor: isDark ? "#374151" : "#F3F4F6",
-                marginLeft: 70,
-              }}
-            />
-            <MenuItem
-              icon="document-text-outline"
-              label="Terms & Conditions"
-              onPress={() => {}}
               isDark={isDark}
             />
           </View>
@@ -620,6 +733,168 @@ export default function TeacherProfile() {
         </View>
       </Animated.ScrollView>
 
+      {/* Edit Profile Modal */}
+      <Modal visible={showEditProfileModal} transparent animationType="slide">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "flex-end",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 24,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 24,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: "700",
+                  color: isDark ? "#F3F4F6" : "#111827",
+                }}
+              >
+                Edit Profile
+              </Text>
+              <Pressable onPress={() => setShowEditProfileModal(false)}>
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={isDark ? "#6B7280" : "#9CA3AF"}
+                />
+              </Pressable>
+            </View>
+
+            <View style={{ marginBottom: 16 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#4B5563",
+                  marginBottom: 8,
+                }}
+              >
+                Full Name
+              </Text>
+              <TextInput
+                value={profileForm.name}
+                onChangeText={(text) =>
+                  setProfileForm({ ...profileForm, name: text })
+                }
+                placeholder="Enter your name"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
+                style={{
+                  borderWidth: 1,
+                  borderColor: isDark ? "#374151" : "#E5E7EB",
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  fontSize: 16,
+                  color: isDark ? "#F3F4F6" : "#1F2937",
+                  backgroundColor: isDark ? "#111827" : "#FFFFFF",
+                }}
+              />
+            </View>
+
+            <View style={{ marginBottom: 16 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#4B5563",
+                  marginBottom: 8,
+                }}
+              >
+                Phone Number
+              </Text>
+              <TextInput
+                value={profileForm.phone}
+                onChangeText={(text) =>
+                  setProfileForm({ ...profileForm, phone: text })
+                }
+                placeholder="Enter phone number"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
+                keyboardType="phone-pad"
+                style={{
+                  borderWidth: 1,
+                  borderColor: isDark ? "#374151" : "#E5E7EB",
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  fontSize: 16,
+                  color: isDark ? "#F3F4F6" : "#1F2937",
+                  backgroundColor: isDark ? "#111827" : "#FFFFFF",
+                }}
+              />
+            </View>
+
+            <View style={{ marginBottom: 24 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#4B5563",
+                  marginBottom: 8,
+                }}
+              >
+                Bio
+              </Text>
+              <TextInput
+                value={profileForm.bio}
+                onChangeText={(text) =>
+                  setProfileForm({ ...profileForm, bio: text })
+                }
+                placeholder="Tell us about yourself"
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
+                multiline
+                numberOfLines={3}
+                style={{
+                  borderWidth: 1,
+                  borderColor: isDark ? "#374151" : "#E5E7EB",
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  fontSize: 16,
+                  color: isDark ? "#F3F4F6" : "#1F2937",
+                  backgroundColor: isDark ? "#111827" : "#FFFFFF",
+                  textAlignVertical: "top",
+                  minHeight: 80,
+                }}
+              />
+            </View>
+
+            <Pressable
+              onPress={handleUpdateProfile}
+              disabled={updatingProfile}
+              style={{
+                backgroundColor: updatingProfile ? "#9CA3AF" : "#4E74F9",
+                paddingVertical: 16,
+                borderRadius: 12,
+                alignItems: "center",
+              }}
+            >
+              {updatingProfile ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text
+                  style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600" }}
+                >
+                  Save Changes
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {/* Password Change Modal */}
       <Modal visible={showPasswordModal} transparent animationType="slide">
         <View
@@ -655,13 +930,21 @@ export default function TeacherProfile() {
                 Change Password
               </Text>
               <Pressable onPress={() => setShowPasswordModal(false)}>
-                <Ionicons name="close" size={24} color={isDark ? "#6B7280" : "#9CA3AF"} />
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={isDark ? "#6B7280" : "#9CA3AF"}
+                />
               </Pressable>
             </View>
 
             <View style={{ marginBottom: 16 }}>
               <Text
-                style={{ fontSize: 14, color: isDark ? "#9CA3AF" : "#4B5563", marginBottom: 8 }}
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#4B5563",
+                  marginBottom: 8,
+                }}
               >
                 Current Password
               </Text>
@@ -688,7 +971,11 @@ export default function TeacherProfile() {
 
             <View style={{ marginBottom: 16 }}>
               <Text
-                style={{ fontSize: 14, color: isDark ? "#9CA3AF" : "#4B5563", marginBottom: 8 }}
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#4B5563",
+                  marginBottom: 8,
+                }}
               >
                 New Password
               </Text>
@@ -715,7 +1002,11 @@ export default function TeacherProfile() {
 
             <View style={{ marginBottom: 24 }}>
               <Text
-                style={{ fontSize: 14, color: isDark ? "#9CA3AF" : "#4B5563", marginBottom: 8 }}
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#4B5563",
+                  marginBottom: 8,
+                }}
               >
                 Confirm New Password
               </Text>
@@ -744,9 +1035,7 @@ export default function TeacherProfile() {
               onPress={handleChangePassword}
               disabled={changingPassword}
               style={{
-                backgroundColor: changingPassword
-                  ? "#9CA3AF"
-                  : "#4E74F9",
+                backgroundColor: changingPassword ? "#9CA3AF" : "#4E74F9",
                 paddingVertical: 16,
                 borderRadius: 12,
                 alignItems: "center",
