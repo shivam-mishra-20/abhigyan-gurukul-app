@@ -98,6 +98,10 @@ export default function StudentLayout() {
         options={{ href: null, headerShown: false }}
       />
       <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen
+        name="settings"
+        options={{ href: null, headerShown: false }}
+      />
       <Tabs.Screen name="attempt/[attemptId]" options={{ href: null }} />
       <Tabs.Screen name="result/[attemptId]" options={{ href: null }} />
       <Tabs.Screen name="course/[courseId]" options={{ href: null }} />

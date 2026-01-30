@@ -6,14 +6,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 // Theme
@@ -107,18 +107,20 @@ export default function LearningScreen() {
     loadData();
   }, []);
 
-  // Stats from backend
-  const avgScore = analytics?.avgScore || 0;
+  // Stats from backend - all real data
   const totalTimeSpent = enrolledCourses.reduce(
     (sum, c) => sum + ((c as any).timeSpent || 0),
     0,
   );
   const hoursSpent = Math.floor(totalTimeSpent / 60);
 
-  // Calculate completion
+  // Calculate completion from progressPercent tracked in backend
   const completedCourses = enrolledCourses.filter(
     (c) => (c.progressPercent || 0) >= 100,
   ).length;
+
+  // Count total exams taken (submitted attempts)
+  const totalExamsTaken = attempts.length;
 
   if (loading) {
     return (
@@ -185,15 +187,15 @@ export default function LearningScreen() {
           <Text style={styles.statLabel}>Completed</Text>
         </View>
         <View style={styles.statCard}>
-          <View style={[styles.statIconBg, { backgroundColor: "#f3e8ff" }]}>
-            <Ionicons name="trophy" size={20} color="#8b5cf6" />
+          <View style={[styles.statIconBg, { backgroundColor: "#dbeafe" }]}>
+            <Ionicons name="document-text" size={20} color="#3b82f6" />
           </View>
-          <Text style={styles.statValue}>{avgScore}%</Text>
-          <Text style={styles.statLabel}>Avg Score</Text>
+          <Text style={styles.statValue}>{totalExamsTaken}</Text>
+          <Text style={styles.statLabel}>Exams</Text>
         </View>
         <View style={styles.statCard}>
-          <View style={[styles.statIconBg, { backgroundColor: "#dbeafe" }]}>
-            <Ionicons name="time" size={20} color="#3b82f6" />
+          <View style={[styles.statIconBg, { backgroundColor: "#f3e8ff" }]}>
+            <Ionicons name="time" size={20} color="#8b5cf6" />
           </View>
           <Text style={styles.statValue}>{hoursSpent}h</Text>
           <Text style={styles.statLabel}>Learning</Text>
@@ -235,7 +237,7 @@ export default function LearningScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 16, fontWeight: "600", color: "#111827" }}>
-            Custom Practice Test
+            Create Custom Test
           </Text>
           <Text style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
             Create your own test with chosen subjects & chapters
@@ -356,24 +358,33 @@ export default function LearningScreen() {
                         )}
                       </View>
 
-                      {/* Video Lecture Progress - Hidden for now */}
-                      {/* <View style={styles.courseProgressContainer}>
-                        <View style={styles.courseProgressBar}>
-                          <View
+                      {/* Course Progress Bar */}
+                      {course.progressPercent !== undefined && (
+                        <View style={styles.courseProgressContainer}>
+                          <View style={styles.courseProgressBar}>
+                            <View
+                              style={[
+                                styles.courseProgressFill,
+                                { width: `${course.progressPercent}%` },
+                                course.progressPercent >= 100 &&
+                                  styles.courseProgressComplete,
+                              ]}
+                            />
+                          </View>
+                          <Text
                             style={[
-                              styles.courseProgressFill,
-                              { width: `${progress}%` },
-                              progress >= 100 && styles.courseProgressComplete
+                              styles.courseProgressText,
+                              course.progressPercent >= 100 && {
+                                color: THEME.primary,
+                              },
                             ]}
-                          />
+                          >
+                            {course.progressPercent >= 100
+                              ? "Complete"
+                              : `${course.progressPercent}%`}
+                          </Text>
                         </View>
-                        <Text style={[
-                          styles.courseProgressText,
-                          progress >= 100 && { color: THEME.primary }
-                        ]}>
-                          {progress >= 100 ? "Complete" : `${progress}%`}
-                        </Text>
-                      </View> */}
+                      )}
                     </View>
 
                     <Ionicons

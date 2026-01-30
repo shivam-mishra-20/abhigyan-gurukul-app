@@ -3,21 +3,21 @@ import { getUser, logout } from "@/lib/auth";
 import { AttendanceSummary, getAttendanceSummary } from "@/lib/enhancedApi";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 // Theme colors
@@ -30,7 +30,7 @@ const THEME = {
 // Available target exams
 const AVAILABLE_EXAMS = [
   "JEE Main",
-  "JEE Advanced", 
+  "JEE Advanced",
   "NEET",
   "CET",
   "Board Exams",
@@ -42,10 +42,22 @@ const AVAILABLE_EXAMS = [
 // Generate consistent color from name
 function getAvatarColor(name: string): string {
   const colors = [
-    "#ef4444", "#f97316", "#f59e0b", "#eab308", 
-    "#84cc16", "#22c55e", "#14b8a6", "#06b6d4",
-    "#0ea5e9", "#3b82f6", "#6366f1", "#8b5cf6",
-    "#a855f7", "#d946ef", "#ec4899", "#f43f5e",
+    "#ef4444",
+    "#f97316",
+    "#f59e0b",
+    "#eab308",
+    "#84cc16",
+    "#22c55e",
+    "#14b8a6",
+    "#06b6d4",
+    "#0ea5e9",
+    "#3b82f6",
+    "#6366f1",
+    "#8b5cf6",
+    "#a855f7",
+    "#d946ef",
+    "#ec4899",
+    "#f43f5e",
   ];
   const index = name.charCodeAt(0) % colors.length;
   return colors[index];
@@ -57,20 +69,20 @@ export default function StudentProfile() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [attendance, setAttendance] = useState<AttendanceSummary | null>(null);
-  
+
   // Edit modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
-  
+
   // Profile image
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  
+
   // Target exams modal
   const [showExamsModal, setShowExamsModal] = useState(false);
   const [selectedExams, setSelectedExams] = useState<string[]>([]);
-  
+
   // Goals modal
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [goals, setGoals] = useState<string[]>([]);
@@ -78,12 +90,13 @@ export default function StudentProfile() {
 
   const loadData = async () => {
     try {
-      const [userData, attendanceData, storedExams, storedGoals] = await Promise.all([
-        getUser(),
-        getAttendanceSummary().catch(() => null),
-        AsyncStorage.getItem("target_exams"),
-        AsyncStorage.getItem("study_goals"),
-      ]);
+      const [userData, attendanceData, storedExams, storedGoals] =
+        await Promise.all([
+          getUser(),
+          getAttendanceSummary().catch(() => null),
+          AsyncStorage.getItem("target_exams"),
+          AsyncStorage.getItem("study_goals"),
+        ]);
       setUser(userData);
       setAttendance(attendanceData);
       // Use server profile image URL, fallback to local storage
@@ -93,8 +106,12 @@ export default function StudentProfile() {
         const storedImage = await AsyncStorage.getItem("profile_image");
         setProfileImage(storedImage);
       }
-      setSelectedExams(storedExams ? JSON.parse(storedExams) : userData?.targetExams || []);
-      setGoals(storedGoals ? JSON.parse(storedGoals) : userData?.studyGoals || []);
+      setSelectedExams(
+        storedExams ? JSON.parse(storedExams) : userData?.targetExams || [],
+      );
+      setGoals(
+        storedGoals ? JSON.parse(storedGoals) : userData?.studyGoals || [],
+      );
       setEditName(userData?.name || "");
       setEditPhone(userData?.phone || "");
     } catch (error) {
@@ -115,34 +132,34 @@ export default function StudentProfile() {
   }, []);
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/splash");
-          }
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          router.replace("/splash");
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Pick and upload profile image to Firebase Storage
   const pickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (!permissionResult.granted) {
-      Alert.alert("Permission Required", "Please allow access to your photo library.");
+      Alert.alert(
+        "Permission Required",
+        "Please allow access to your photo library.",
+      );
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
@@ -151,24 +168,24 @@ export default function StudentProfile() {
     if (!result.canceled && result.assets[0]) {
       const imageUri = result.assets[0].uri;
       setProfileImage(imageUri); // Show locally immediately
-      
+
       try {
         // Upload to Firebase Storage via backend
         const formData = new FormData();
-        const fileName = imageUri.split('/').pop() || 'profile.jpg';
-        const fileType = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
-        
-        formData.append('image', {
+        const fileName = imageUri.split("/").pop() || "profile.jpg";
+        const fileType = fileName.endsWith(".png") ? "image/png" : "image/jpeg";
+
+        formData.append("image", {
           uri: imageUri,
           name: fileName,
           type: fileType,
         } as any);
-        
-        const response = await apiFetch('/api/auth/profile/image', {
-          method: 'POST',
+
+        const response = (await apiFetch("/api/auth/profile/image", {
+          method: "POST",
           body: formData,
-        }) as { profileImage: string; user: any };
-        
+        })) as { profileImage: string; user: any };
+
         if (response?.profileImage) {
           setProfileImage(response.profileImage);
           // Update local user data with new profile image URL
@@ -177,10 +194,13 @@ export default function StudentProfile() {
           setUser(updatedUser);
         }
       } catch (error) {
-        console.error('Error uploading profile image:', error);
+        console.error("Error uploading profile image:", error);
         // Keep local image on error
         await AsyncStorage.setItem("profile_image", imageUri);
-        Alert.alert("Upload Failed", "Image saved locally. Will retry upload later.");
+        Alert.alert(
+          "Upload Failed",
+          "Image saved locally. Will retry upload later.",
+        );
       }
     }
   };
@@ -190,11 +210,11 @@ export default function StudentProfile() {
     setSaving(true);
     try {
       // Update profile via API
-      const response = await apiFetch('/api/auth/profile', {
-        method: 'PATCH',
+      const response = (await apiFetch("/api/auth/profile", {
+        method: "PATCH",
         body: JSON.stringify({ name: editName, phone: editPhone }),
-      }) as any;
-      
+      })) as any;
+
       // Update local storage user data
       const updatedUser = { ...user, ...response };
       await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
@@ -202,7 +222,7 @@ export default function StudentProfile() {
       setShowEditModal(false);
       Alert.alert("Success", "Profile updated successfully!");
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error updating profile:", error);
       // Fallback to local update
       const updatedUser = { ...user, name: editName, phone: editPhone };
       await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
@@ -220,21 +240,19 @@ export default function StudentProfile() {
     setShowExamsModal(false);
     // Sync with server
     try {
-      await apiFetch('/api/auth/profile', {
-        method: 'PATCH',
+      await apiFetch("/api/auth/profile", {
+        method: "PATCH",
         body: JSON.stringify({ targetExams: selectedExams }),
       });
     } catch (error) {
-      console.error('Error syncing target exams:', error);
+      console.error("Error syncing target exams:", error);
     }
   };
 
   // Toggle exam selection
   const toggleExam = (exam: string) => {
-    setSelectedExams(prev => 
-      prev.includes(exam) 
-        ? prev.filter(e => e !== exam)
-        : [...prev, exam]
+    setSelectedExams((prev) =>
+      prev.includes(exam) ? prev.filter((e) => e !== exam) : [...prev, exam],
     );
   };
 
@@ -247,12 +265,12 @@ export default function StudentProfile() {
       await AsyncStorage.setItem("study_goals", JSON.stringify(updatedGoals));
       // Sync with server
       try {
-        await apiFetch('/api/auth/profile', {
-          method: 'PATCH',
+        await apiFetch("/api/auth/profile", {
+          method: "PATCH",
           body: JSON.stringify({ studyGoals: updatedGoals }),
         });
       } catch (error) {
-        console.error('Error syncing study goals:', error);
+        console.error("Error syncing study goals:", error);
       }
     }
   };
@@ -264,12 +282,12 @@ export default function StudentProfile() {
     await AsyncStorage.setItem("study_goals", JSON.stringify(updatedGoals));
     // Sync with server
     try {
-      await apiFetch('/api/auth/profile', {
-        method: 'PATCH',
+      await apiFetch("/api/auth/profile", {
+        method: "PATCH",
         body: JSON.stringify({ studyGoals: updatedGoals }),
       });
     } catch (error) {
-      console.error('Error syncing study goals:', error);
+      console.error("Error syncing study goals:", error);
     }
   };
 
@@ -281,7 +299,8 @@ export default function StudentProfile() {
     );
   }
 
-  const displayExams = selectedExams.length > 0 ? selectedExams : user?.targetExams || [];
+  const displayExams =
+    selectedExams.length > 0 ? selectedExams : user?.targetExams || [];
   const firstInitial = (user?.name || "S").charAt(0).toUpperCase();
   const avatarColor = getAvatarColor(user?.name || "Student");
 
@@ -301,13 +320,16 @@ export default function StudentProfile() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Profile</Text>
-          
+
           {/* Profile Info */}
           <View style={styles.profileSection}>
             {/* Avatar with Edit Button */}
             <Pressable onPress={pickImage} style={styles.avatarContainer}>
               {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                <Image
+                  source={{ uri: profileImage }}
+                  style={styles.avatarImage}
+                />
               ) : (
                 <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
                   <Text style={styles.avatarText}>{firstInitial}</Text>
@@ -317,19 +339,19 @@ export default function StudentProfile() {
                 <Ionicons name="camera" size={14} color="white" />
               </View>
             </Pressable>
-            
+
             <Text style={styles.userName}>{user?.name || "Student"}</Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
-            
+
             {/* Edit Profile Button */}
-            <Pressable 
+            <Pressable
               style={styles.editButton}
               onPress={() => setShowEditModal(true)}
             >
               <Ionicons name="pencil" size={14} color="white" />
               <Text style={styles.editButtonText}>Edit Profile</Text>
             </Pressable>
-            
+
             {/* Badges */}
             <View style={styles.badgeRow}>
               {user?.classLevel && (
@@ -355,16 +377,22 @@ export default function StudentProfile() {
                 <Text style={styles.cardTitle}>Target Exams</Text>
               </View>
               <Pressable onPress={() => setShowExamsModal(true)}>
-                <Text style={[styles.linkText, { color: THEME.primary }]}>Switch</Text>
+                <Text style={[styles.linkText, { color: THEME.primary }]}>
+                  Switch
+                </Text>
               </Pressable>
             </View>
             <View style={styles.chipContainer}>
-              {displayExams.length > 0 ? displayExams.map((exam: string, idx: number) => (
-                <View key={idx} style={styles.examChip}>
-                  <Text style={styles.examChipText}>{exam}</Text>
-                </View>
-              )) : (
-                <Text style={styles.emptyText}>Tap Switch to select your target exams</Text>
+              {displayExams.length > 0 ? (
+                displayExams.map((exam: string, idx: number) => (
+                  <View key={idx} style={styles.examChip}>
+                    <Text style={styles.examChipText}>{exam}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyText}>
+                  Tap Switch to select your target exams
+                </Text>
               )}
             </View>
           </View>
@@ -386,13 +414,19 @@ export default function StudentProfile() {
               <View style={styles.goalsList}>
                 {goals.map((goal, idx) => (
                   <View key={idx} style={styles.goalItem}>
-                    <Ionicons name="checkmark-circle" size={18} color={THEME.primary} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={18}
+                      color={THEME.primary}
+                    />
                     <Text style={styles.goalText}>{goal}</Text>
                   </View>
                 ))}
               </View>
             ) : (
-              <Text style={styles.emptyText}>Set your study goals to stay motivated!</Text>
+              <Text style={styles.emptyText}>
+                Set your study goals to stay motivated!
+              </Text>
             )}
           </View>
 
@@ -404,8 +438,12 @@ export default function StudentProfile() {
                   <Ionicons name="calendar" size={20} color={THEME.primary} />
                   <Text style={styles.cardTitle}>Attendance</Text>
                 </View>
-                <Pressable onPress={() => router.push("/(student)/modules/attendance")}>
-                  <Text style={[styles.linkText, { color: THEME.primary }]}>View</Text>
+                <Pressable
+                  onPress={() => router.push("/(student)/modules/attendance")}
+                >
+                  <Text style={[styles.linkText, { color: THEME.primary }]}>
+                    View
+                  </Text>
                 </Pressable>
               </View>
               <View style={styles.statsRow}>
@@ -414,7 +452,9 @@ export default function StudentProfile() {
                   <Text style={styles.statLabel}>Attendance</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: THEME.primary }]}>{attendance.presentDays}</Text>
+                  <Text style={[styles.statValue, { color: THEME.primary }]}>
+                    {attendance.presentDays}
+                  </Text>
                   <Text style={styles.statLabel}>Present</Text>
                 </View>
                 <View style={styles.statItem}>
@@ -428,7 +468,7 @@ export default function StudentProfile() {
           {/* Quick Access */}
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Quick Access</Text>
-            <Pressable 
+            <Pressable
               style={styles.menuItem}
               onPress={() => router.push("/(student)/modules/results")}
             >
@@ -438,7 +478,7 @@ export default function StudentProfile() {
               <Text style={styles.menuText}>My Results</Text>
               <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
             </Pressable>
-            <Pressable 
+            <Pressable
               style={styles.menuItem}
               onPress={() => router.push("/(student)/modules/progress")}
             >
@@ -448,7 +488,7 @@ export default function StudentProfile() {
               <Text style={styles.menuText}>Performance Analytics</Text>
               <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
             </Pressable>
-            <Pressable 
+            <Pressable
               style={[styles.menuItem, { borderBottomWidth: 0 }]}
               onPress={() => router.push("/(student)/modules/leaderboard")}
             >
@@ -463,25 +503,14 @@ export default function StudentProfile() {
           {/* Settings */}
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Settings</Text>
-            <Pressable style={styles.menuItem}>
+            <Pressable
+              style={[styles.menuItem, { borderBottomWidth: 0 }]}
+              onPress={() => router.push("/(student)/settings/notifications")}
+            >
               <View style={[styles.menuIcon, { backgroundColor: "#f3f4f6" }]}>
                 <Ionicons name="notifications" size={20} color="#6b7280" />
               </View>
               <Text style={styles.menuText}>Notifications</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-            </Pressable>
-            <Pressable style={styles.menuItem}>
-              <View style={[styles.menuIcon, { backgroundColor: "#f3f4f6" }]}>
-                <Ionicons name="lock-closed" size={20} color="#6b7280" />
-              </View>
-              <Text style={styles.menuText}>Privacy & Security</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-            </Pressable>
-            <Pressable style={[styles.menuItem, { borderBottomWidth: 0 }]}>
-              <View style={[styles.menuIcon, { backgroundColor: "#f3f4f6" }]}>
-                <Ionicons name="help-circle" size={20} color="#6b7280" />
-              </View>
-              <Text style={styles.menuText}>Help & Support</Text>
               <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
             </Pressable>
           </View>
@@ -504,7 +533,7 @@ export default function StudentProfile() {
                 <Ionicons name="close" size={24} color="#6b7280" />
               </Pressable>
             </View>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Name</Text>
               <TextInput
@@ -515,7 +544,7 @@ export default function StudentProfile() {
                 placeholderTextColor="#9ca3af"
               />
             </View>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Phone</Text>
               <TextInput
@@ -527,15 +556,15 @@ export default function StudentProfile() {
                 keyboardType="phone-pad"
               />
             </View>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email</Text>
               <View style={[styles.input, { backgroundColor: "#f3f4f6" }]}>
                 <Text style={{ color: "#6b7280" }}>{user?.email}</Text>
               </View>
             </View>
-            
-            <Pressable 
+
+            <Pressable
               style={[styles.saveButton, saving && { opacity: 0.7 }]}
               onPress={handleSaveProfile}
               disabled={saving}
@@ -560,21 +589,24 @@ export default function StudentProfile() {
                 <Ionicons name="close" size={24} color="#6b7280" />
               </Pressable>
             </View>
-            
+
             <View style={styles.examOptions}>
               {AVAILABLE_EXAMS.map((exam) => (
                 <Pressable
                   key={exam}
                   style={[
                     styles.examOption,
-                    selectedExams.includes(exam) && styles.examOptionSelected
+                    selectedExams.includes(exam) && styles.examOptionSelected,
                   ]}
                   onPress={() => toggleExam(exam)}
                 >
-                  <Text style={[
-                    styles.examOptionText,
-                    selectedExams.includes(exam) && styles.examOptionTextSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.examOptionText,
+                      selectedExams.includes(exam) &&
+                        styles.examOptionTextSelected,
+                    ]}
+                  >
                     {exam}
                   </Text>
                   {selectedExams.includes(exam) && (
@@ -583,7 +615,7 @@ export default function StudentProfile() {
                 </Pressable>
               ))}
             </View>
-            
+
             <Pressable style={styles.saveButton} onPress={handleSaveExams}>
               <Text style={styles.saveButtonText}>Save Exams</Text>
             </Pressable>
@@ -601,7 +633,7 @@ export default function StudentProfile() {
                 <Ionicons name="close" size={24} color="#6b7280" />
               </Pressable>
             </View>
-            
+
             <View style={styles.addGoalRow}>
               <TextInput
                 style={[styles.input, { flex: 1, marginRight: 12 }]}
@@ -614,7 +646,7 @@ export default function StudentProfile() {
                 <Ionicons name="add" size={24} color="white" />
               </Pressable>
             </View>
-            
+
             <ScrollView style={styles.goalsScrollView}>
               {goals.map((goal, idx) => (
                 <View key={idx} style={styles.goalEditItem}>
@@ -630,9 +662,9 @@ export default function StudentProfile() {
                 </Text>
               )}
             </ScrollView>
-            
-            <Pressable 
-              style={styles.saveButton} 
+
+            <Pressable
+              style={styles.saveButton}
               onPress={() => setShowGoalsModal(false)}
             >
               <Text style={styles.saveButtonText}>Done</Text>

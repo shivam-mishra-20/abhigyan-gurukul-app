@@ -46,11 +46,14 @@ const BATCH_OPTIONS = [
 
 // Target exam options
 const TARGET_EXAM_OPTIONS = [
-  { label: "Board Exams", value: "Boards", icon: "school-outline" },
-  { label: "JEE Main/Advanced", value: "JEE", icon: "rocket-outline" },
-  { label: "NEET UG", value: "NEET", icon: "medkit-outline" },
+  { label: "JEE Main", value: "JEE Main", icon: "rocket-outline" },
+  { label: "JEE Advanced", value: "JEE Advanced", icon: "rocket-outline" },
+  { label: "NEET", value: "NEET", icon: "medkit-outline" },
+  { label: "CET", value: "CET", icon: "document-text-outline" },
+  { label: "Board Exams", value: "Board Exams", icon: "school-outline" },
   { label: "CUET", value: "CUET", icon: "document-text-outline" },
   { label: "Olympiad", value: "Olympiad", icon: "trophy-outline" },
+  { label: "Foundation", value: "Foundation", icon: "bookmarks-outline" },
   { label: "Other", value: "Other", icon: "ellipsis-horizontal-outline" },
 ];
 

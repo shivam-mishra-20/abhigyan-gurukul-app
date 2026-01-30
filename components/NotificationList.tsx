@@ -23,7 +23,15 @@ interface NotificationItem {
 }
 
 export function NotificationList() {
-  const { colors, isDark } = useAppTheme();
+  const themeContext = useAppTheme();
+  const colors = themeContext?.colors || {
+    primary: "#059669",
+    background: "#ffffff",
+    text: "#1f2937",
+    textSecondary: "#6b7280",
+    border: "#e5e7eb",
+  };
+  const isDark = themeContext?.isDark || false;
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -49,7 +57,7 @@ export function NotificationList() {
     try {
       await apiFetch(`/api/notifications/${id}/read`, { method: "PUT" });
       setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n)),
       );
     } catch (error) {
       console.error("Failed to mark as read", error);
@@ -61,8 +69,8 @@ export function NotificationList() {
       markAsRead(notification._id);
     }
     // Handle navigation based on type/data if needed
-    if (notification.type === 'exam' && notification.data?.examId) {
-        // Example: router.push(`/(student)/exams/${notification.data.examId}`);
+    if (notification.type === "exam" && notification.data?.examId) {
+      // Example: router.push(`/(student)/exams/${notification.data.examId}`);
     }
   };
 
@@ -112,7 +120,9 @@ export function NotificationList() {
               !item.read ? "bg-opacity-5" : ""
             }`}
             style={{
-              backgroundColor: !item.read ? colors.primary + "10" : "transparent",
+              backgroundColor: !item.read
+                ? colors.primary + "10"
+                : "transparent",
               borderColor: colors.border,
             }}
           >

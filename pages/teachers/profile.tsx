@@ -8,16 +8,16 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    Modal,
-    Pressable,
-    Switch,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  Modal,
+  Pressable,
+  Switch,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -135,7 +135,8 @@ const MenuItem = ({
   );
 };
 
-// Stat Badge Component
+// Stat Badge Component (commented out - no longer used)
+/*
 const StatBadge = ({
   icon,
   label,
@@ -189,10 +190,11 @@ const StatBadge = ({
     </Text>
   </View>
 );
+*/
 
 export default function TeacherProfile() {
   const router = useRouter();
-  const { isDark, themeMode, setThemeMode } = useAppTheme();
+  const { isDark } = useAppTheme(); // themeMode, setThemeMode commented out - not used
   const [user, setUser] = useState<any>(null);
 
   // Modals
@@ -223,14 +225,29 @@ export default function TeacherProfile() {
   }, []);
 
   const loadUser = async () => {
-    const userData = await getUser();
-    setUser(userData);
-    if (userData) {
-      setProfileForm({
-        name: userData.name || "",
-        phone: userData.phone || "",
-        bio: userData.bio || "",
-      });
+    try {
+      // Fetch fresh data from backend
+      const response = (await apiFetch("/api/auth/me")) as any;
+      setUser(response);
+      if (response) {
+        setProfileForm({
+          name: response.name || "",
+          phone: response.phone || "",
+          bio: response.bio || "",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load user:", error);
+      // Fallback to AsyncStorage if API fails
+      const userData = await getUser();
+      setUser(userData);
+      if (userData) {
+        setProfileForm({
+          name: userData.name || "",
+          phone: userData.phone || "",
+          bio: userData.bio || "",
+        });
+      }
     }
   };
 
@@ -303,10 +320,19 @@ export default function TeacherProfile() {
 
     setUpdatingProfile(true);
     try {
-      await apiFetch("/api/users/me/profile", {
-        method: "PUT",
+      const response = await apiFetch("/api/auth/profile", {
+        method: "PATCH",
         body: JSON.stringify(profileForm),
       });
+
+      // Save updated data to AsyncStorage
+      if (response) {
+        await import("@react-native-async-storage/async-storage").then(
+          (mod) => {
+            mod.default.setItem("user", JSON.stringify(response));
+          },
+        );
+      }
 
       Alert.alert("Success", "Profile updated successfully");
       setShowEditProfileModal(false);
@@ -524,45 +550,100 @@ export default function TeacherProfile() {
             marginHorizontal: 20,
             backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
             borderRadius: 20,
-            paddingVertical: 16,
-            paddingHorizontal: 12,
-            flexDirection: "row",
+            paddingVertical: 20,
+            paddingHorizontal: 16,
             ...SHADOWS.lg,
           }}
         >
-          <StatBadge
-            icon="school"
-            label="Students"
-            value="--"
-            color="#4E74F9"
-            isDark={isDark}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                backgroundColor: "#ecfdf5",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 12,
+              }}
+            >
+              <Ionicons name="briefcase" size={20} color="#059669" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: isDark ? "#9CA3AF" : "#6B7280",
+                }}
+              >
+                Role
+              </Text>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: "600",
+                  color: isDark ? "#F3F4F6" : "#111827",
+                  marginTop: 2,
+                  textTransform: "capitalize",
+                }}
+              >
+                {user?.role || "Teacher"}
+              </Text>
+            </View>
+          </View>
+          <View
+            style={{
+              height: 1,
+              backgroundColor: isDark ? "#374151" : "#F3F4F6",
+              marginVertical: 12,
+            }}
           />
           <View
             style={{
-              width: 1,
-              backgroundColor: isDark ? "#374151" : "#E5E7EB",
+              flexDirection: "row",
+              alignItems: "center",
             }}
-          />
-          <StatBadge
-            icon="document-text"
-            label="Exams"
-            value="--"
-            color="#3B82F6"
-            isDark={isDark}
-          />
-          <View
-            style={{
-              width: 1,
-              backgroundColor: isDark ? "#374151" : "#E5E7EB",
-            }}
-          />
-          <StatBadge
-            icon="star"
-            label="Rating"
-            value="4.8"
-            color="#F59E0B"
-            isDark={isDark}
-          />
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                backgroundColor: "#dbeafe",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 12,
+              }}
+            >
+              <Ionicons name="card" size={20} color="#3b82f6" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: isDark ? "#9CA3AF" : "#6B7280",
+                }}
+              >
+                Employee ID
+              </Text>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: "600",
+                  color: isDark ? "#F3F4F6" : "#111827",
+                  marginTop: 2,
+                }}
+              >
+                {user?.empCode || "Not Assigned"}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* About Section */}
@@ -637,7 +718,7 @@ export default function TeacherProfile() {
               onToggle={setNotifications}
               isDark={isDark}
             />
-            <View
+            {/* <View
               style={{
                 height: 1,
                 backgroundColor: isDark ? "#374151" : "#F3F4F6",
@@ -651,7 +732,7 @@ export default function TeacherProfile() {
               toggleValue={themeMode === "dark"}
               onToggle={(value) => setThemeMode(value ? "dark" : "light")}
               isDark={isDark}
-            />
+            /> */}
           </View>
         </View>
 

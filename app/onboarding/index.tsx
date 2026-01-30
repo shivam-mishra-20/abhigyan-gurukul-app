@@ -1,7 +1,7 @@
 import { SlideData, slides } from "@/constants/onboardingData";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
     Dimensions,
     FlatList,
@@ -28,11 +28,19 @@ const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<SlideData>);
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { screen } = useLocalSearchParams();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const scrollX = useSharedValue(0);
   const buttonScale = useSharedValue(1);
+
+  // Check if we should show register screen from query params
+  useEffect(() => {
+    if (screen === "register") {
+      setShowRegister(true);
+    }
+  }, [screen]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -45,7 +53,7 @@ export default function OnboardingScreen() {
       if (viewableItems.length > 0 && viewableItems[0].index !== null) {
         setCurrentIndex(viewableItems[0].index);
       }
-    }
+    },
   ).current;
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
@@ -106,14 +114,14 @@ export default function OnboardingScreen() {
         scrollX.value,
         inputRange,
         [8, 24, 8],
-        Extrapolation.CLAMP
+        Extrapolation.CLAMP,
       );
 
       const opacity = interpolate(
         scrollX.value,
         inputRange,
         [0.4, 1, 0.4],
-        Extrapolation.CLAMP
+        Extrapolation.CLAMP,
       );
 
       return {

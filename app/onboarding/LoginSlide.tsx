@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -119,14 +120,13 @@ export default function LoginSlide({
               },
             ]}
           >
-            <LinearGradient
-              colors={["#10B981", "#059669"]}
-              style={styles.logoGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="school" size={40} color="#FFFFFF" />
-            </LinearGradient>
+            <View style={styles.logoImageContainer}>
+              <Image
+                source={require("../../assets/images/logo.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={styles.logoTitle}>Abhigyan Gurukul</Text>
             <Text style={styles.logoSubtitle}>Excellence in Education</Text>
           </Animated.View>
@@ -280,10 +280,9 @@ export default function LoginSlide({
                 pressed && styles.registerButtonPressed,
               ]}
             >
-              <View style={styles.registerLogoContainer}>
-                <Ionicons name="school" size={18} color="#FFFFFF" />
-              </View>
-              <Text style={styles.registerButtonText}>Create New Account</Text>
+              <Text style={styles.registerButtonText}>
+                Don&apos;t have an account? Register
+              </Text>
             </Pressable>
 
             {/* Info Text */}
@@ -334,6 +333,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 12,
+  },
+  logoImageContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  logoImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 20,
   },
   logoTitle: {
     fontSize: 28,

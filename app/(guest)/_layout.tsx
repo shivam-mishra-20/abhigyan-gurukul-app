@@ -1,21 +1,24 @@
-import { Ionicons } from "@expo/vector-icons";
+import { AnimatedTabBar } from "@/components/animated-tab-bar";
+import { useAppTheme } from "@/lib/context";
 import { Tabs } from "expo-router";
+import { Compass, Home, Info, LogIn } from "lucide-react-native";
 
 export default function GuestLayout() {
+  const { isDark } = useAppTheme();
+
   return (
     <Tabs
+      tabBar={(props) => (
+        <AnimatedTabBar
+          {...props}
+          activeTintColor={isDark ? "#6366F1" : "#059669"}
+          inactiveTintColor={isDark ? "#A1A1AA" : "#9CA3AF"}
+          backgroundColor={isDark ? "#27272A" : "#FFFFFF"}
+          isDark={isDark}
+        />
+      )}
       screenOptions={{
-        tabBarActiveTintColor: "#22c55e",
-        tabBarInactiveTintColor: "#9ca3af",
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#ffffff",
-          borderTopWidth: 1,
-          borderTopColor: "#e5e7eb",
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
-        },
       }}
     >
       <Tabs.Screen
@@ -23,7 +26,7 @@ export default function GuestLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Home size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -32,7 +35,7 @@ export default function GuestLayout() {
         options={{
           title: "Explore",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass" size={size} color={color} />
+            <Compass size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -41,7 +44,7 @@ export default function GuestLayout() {
         options={{
           title: "About",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="information-circle" size={size} color={color} />
+            <Info size={size} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -50,7 +53,7 @@ export default function GuestLayout() {
         options={{
           title: "Login",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="log-in" size={size} color={color} />
+            <LogIn size={size} color={color} strokeWidth={2} />
           ),
         }}
       />

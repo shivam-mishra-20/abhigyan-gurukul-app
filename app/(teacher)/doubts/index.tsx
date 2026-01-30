@@ -3,28 +3,28 @@ import { uploadFileWithSignedUrl } from "@/lib/firebaseUpload";
 import { getSocket, joinDoubtRoom, leaveDoubtRoom } from "@/lib/socket";
 import * as ImagePicker from "expo-image-picker";
 import {
-    ArrowLeft,
-    CheckCircle,
-    FileText,
-    Image as ImageIcon,
-    Send,
-    User,
+  ArrowLeft,
+  CheckCircle,
+  FileText,
+  Image as ImageIcon,
+  Send,
+  User,
 } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Linking,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -544,7 +544,7 @@ export default function TeacherDoubts() {
                   style={styles.fullscreenClose}
                   onPress={() => setFullscreenImage(null)}
                 >
-                  <Text style={styles.fullscreenCloseText}>\u2715 Close</Text>
+                  <Text style={styles.fullscreenCloseText}>X</Text>
                 </Pressable>
                 <Image
                   source={{ uri: fullscreenImage }}

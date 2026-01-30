@@ -24,6 +24,17 @@ export interface User {
   targetExams?: string[];
   studyGoals?: string[];
   profileImage?: string;
+  settings?: {
+    pushNotifications?: boolean;
+    emailNotifications?: boolean;
+    examReminders?: boolean;
+    doubtAlerts?: boolean;
+    scheduleUpdates?: boolean;
+    materialUpdates?: boolean;
+    notesUpdates?: boolean;
+    autoSave?: boolean;
+    language?: string;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

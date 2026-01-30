@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import RegisterSlide from "../onboarding/RegisterSlide";
 
 export default function GuestLogin() {
   const router = useRouter();
@@ -24,6 +26,7 @@ export default function GuestLogin() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -89,8 +92,26 @@ export default function GuestLogin() {
   };
 
   const handleRegister = () => {
-    router.push("/onboarding" as any);
+    setShowRegister(true);
   };
+
+  const handleBackToLogin = () => {
+    setShowRegister(false);
+  };
+
+  const handleRegistrationSuccess = () => {
+    setShowRegister(false);
+  };
+
+  // Show RegisterSlide if register is toggled
+  if (showRegister) {
+    return (
+      <RegisterSlide
+        onBack={handleBackToLogin}
+        onRegistrationSuccess={handleRegistrationSuccess}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -115,14 +136,13 @@ export default function GuestLogin() {
               },
             ]}
           >
-            <LinearGradient
-              colors={["#10B981", "#059669"]}
-              style={styles.logoGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="school" size={40} color="#FFFFFF" />
-            </LinearGradient>
+            <View style={styles.logoImageContainer}>
+              <Image
+                source={require("../../assets/images/logo.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={styles.logoTitle}>Abhigyan Gurukul</Text>
             <Text style={styles.logoSubtitle}>Excellence in Education</Text>
           </Animated.View>
@@ -276,10 +296,9 @@ export default function GuestLogin() {
                 pressed && styles.registerButtonPressed,
               ]}
             >
-              <View style={styles.registerLogoContainer}>
-                <Ionicons name="school" size={18} color="#FFFFFF" />
-              </View>
-              <Text style={styles.registerButtonText}>Create New Account</Text>
+              <Text style={styles.registerButtonText}>
+                Don&apos;t have an account? Register
+              </Text>
             </Pressable>
 
             {/* Info Text */}
@@ -319,17 +338,23 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 32,
   },
-  logoGradient: {
-    width: 80,
-    height: 80,
+  logoImageContainer: {
+    width: 100,
+    height: 100,
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FFFFFF",
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 12,
+  },
+  logoImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 20,
   },
   logoTitle: {
     fontSize: 28,
